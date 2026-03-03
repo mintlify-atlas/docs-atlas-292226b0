@@ -1,0 +1,327 @@
+---
+title: 'Encoders'
+description: 'QR data encoding functions that transform structured data into QR-ready string formats'
+---
+
+## Overview
+
+The encoder module provides functions to transform structured QR data objects into properly formatted strings ready for QR code generation. Each QR type has its own encoding logic to produce the appropriate output format.
+
+## Main Encoder
+
+### encodeQrData
+
+Main encoding function that routes to the appropriate encoder based on QR type.
+
+```typescript
+function encodeQrData(
+  type: QrTypeKey,
+  data:
+    | TextQrData
+    | UrlQrData
+    | WifiQrData
+    | VCardQrData
+    | PaymentQrData
+    | EventQrData,
+): string
+```
+
+<ParamField path="type" type="QrTypeKey" required>
+  The QR code type identifier (PlainText, Url, Wifi, VCard, Payment, or Event)
+</ParamField>
+
+<ParamField path="data" type="QrDataUnion" required>
+  The data object corresponding to the specified type
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Encoded string ready for QR code generation. Returns empty string if type is invalid
+</ResponseField>
+
+#### Example
+
+```typescript
+import { encodeQrData, QrTypeKey } from './encoders';
+
+const encoded = encodeQrData(QrTypeKey.Url, { url: "example.com" });
+// Returns: "https://example.com"
+```
+
+## Type-Specific Encoders
+
+### encodeText
+
+Encodes plain text data by trimming whitespace.
+
+```typescript
+function encodeText(data: TextQrData): string
+```
+
+<ParamField path="data" type="TextQrData" required>
+  Text data object containing the text to encode
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Trimmed text string
+</ResponseField>
+
+#### Example
+
+```typescript
+const result = encodeText({ text: "  Hello World  " });
+// Returns: "Hello World"
+```
+
+### encodeUrl
+
+Encodes URL data, automatically adding https:// protocol if missing.
+
+```typescript
+function encodeUrl(data: UrlQrData): string
+```
+
+<ParamField path="data" type="UrlQrData" required>
+  URL data object containing the URL to encode
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Fully qualified URL with protocol
+</ResponseField>
+
+#### Behavior
+
+- Trims whitespace from the URL
+- If URL doesn't start with `http://` or `https://`, prepends `https://`
+- Preserves existing protocol if present
+
+#### Example
+
+```typescript
+const result1 = encodeUrl({ url: "example.com" });
+// Returns: "https://example.com"
+
+const result2 = encodeUrl({ url: "http://example.com" });
+// Returns: "http://example.com"
+```
+
+### encodeWifi
+
+Encodes WiFi network data in the standard WiFi QR code format.
+
+```typescript
+function encodeWifi(data: WifiQrData): string
+```
+
+<ParamField path="data" type="WifiQrData" required>
+  WiFi data object containing network credentials
+</ParamField>
+
+<ResponseField name="return" type="string">
+  WiFi QR code string in format: `WIFI:T:security;S:ssid;P:password;;`
+</ResponseField>
+
+#### Behavior
+
+- Formats data according to WiFi QR code specification
+- Omits password for `nopass` security type
+- Trims SSID and password values
+
+#### Example
+
+```typescript
+const result = encodeWifi({
+  ssid: "MyNetwork",
+  password: "secret123",
+  security: "WPA"
+});
+// Returns: "WIFI:T:WPA;S:MyNetwork;P:secret123;;"
+
+const openNetwork = encodeWifi({
+  ssid: "FreeWiFi",
+  password: "",
+  security: "nopass"
+});
+// Returns: "WIFI:T:nopass;S:FreeWiFi;P:;;"
+```
+
+### encodeVCard
+
+Encodes contact data in vCard 3.0 format.
+
+```typescript
+function encodeVCard(data: VCardQrData): string
+```
+
+<ParamField path="data" type="VCardQrData" required>
+  vCard data object containing contact information
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Multi-line vCard 3.0 formatted string
+</ResponseField>
+
+#### Behavior
+
+- Generates vCard 3.0 format
+- Combines firstName and lastName into FN (full name) field
+- Only includes optional fields if they contain non-empty values
+- Automatically adds `https://` protocol to website if missing
+- Phone marked as TYPE=VOICE, mobile as TYPE=CELL
+
+#### Example
+
+```typescript
+const result = encodeVCard({
+  firstName: "John",
+  lastName: "Doe",
+  phone: "+1234567890",
+  mobile: "+0987654321",
+  email: "john@example.com",
+  organization: "Acme Corp",
+  title: "Developer",
+  website: "example.com",
+  address: "123 Main St",
+  note: "Sample contact"
+});
+
+// Returns:
+// BEGIN:VCARD
+// VERSION:3.0
+// FN:John Doe
+// N:Doe;John;;;
+// TEL;TYPE=VOICE:+1234567890
+// TEL;TYPE=CELL:+0987654321
+// EMAIL:john@example.com
+// ORG:Acme Corp
+// TITLE:Developer
+// URL:https://example.com
+// ADR:;;123 Main St;;;
+// NOTE:Sample contact
+// END:VCARD
+```
+
+### encodePayment
+
+Encodes payment data in either cryptocurrency or bank transfer format.
+
+```typescript
+function encodePayment(data: PaymentQrData): string
+```
+
+<ParamField path="data" type="PaymentQrData" required>
+  Payment data object containing payment details
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Payment string formatted according to payment method
+</ResponseField>
+
+#### Behavior
+
+- For `method === "crypto"`: Returns `{account}?amount={amount}`
+- For other methods: Returns URL-encoded parameters joined with `&`
+- Includes reference field only if provided
+
+#### Example
+
+```typescript
+// Cryptocurrency payment
+const crypto = encodePayment({
+  method: "crypto",
+  name: "John Doe",
+  account: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+  bank: "Bitcoin",
+  amount: 0.5,
+  reference: ""
+});
+// Returns: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.5"
+
+// Bank transfer
+const bank = encodePayment({
+  method: "transfer",
+  name: "John Doe",
+  account: "123456789",
+  bank: "Example Bank",
+  amount: 100,
+  reference: "INV-001"
+});
+// Returns: "account=123456789&name=John Doe&bank=Example Bank&amount=100&reference=INV-001"
+```
+
+### encodeEvent
+
+Encodes calendar event data in iCalendar (vCalendar) format.
+
+```typescript
+function encodeEvent(data: EventQrData): string
+```
+
+<ParamField path="data" type="EventQrData" required>
+  Event data object containing event details
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Multi-line vCalendar formatted string
+</ResponseField>
+
+#### Behavior
+
+- Generates vCalendar 2.0 format
+- Converts datetime strings to iCalendar format (removes `-`, `:`, replaces space with `T`)
+- Only includes description if provided
+- Required fields: title, location, start, end
+
+#### Example
+
+```typescript
+const result = encodeEvent({
+  title: "Team Meeting",
+  description: "Quarterly planning session",
+  location: "Conference Room A",
+  start: "2024-03-15 10:00:00",
+  end: "2024-03-15 11:00:00"
+});
+
+// Returns:
+// BEGIN:VCALENDAR
+// VERSION:2.0
+// BEGIN:VEVENT
+// SUMMARY:Team Meeting
+// DESCRIPTION:Quarterly planning session
+// LOCATION:Conference Room A
+// DTSTART:20240315T100000
+// DTEND:20240315T110000
+// END:VEVENT
+// END:VCALENDAR
+```
+
+## Format Specifications
+
+### WiFi Format
+
+Follows the standard WiFi QR code format:
+```
+WIFI:T:{security};S:{ssid};P:{password};;
+```
+
+### vCard Format
+
+vCard 3.0 specification with standard fields:
+- `FN`: Full name
+- `N`: Structured name (Last;First;;;)
+- `TEL`: Phone numbers with TYPE parameter
+- `EMAIL`: Email address
+- `ORG`: Organization
+- `TITLE`: Job title
+- `URL`: Website
+- `ADR`: Address (;;street;;;)
+- `NOTE`: Notes
+
+### vCalendar Format
+
+vCalendar 2.0 (iCalendar) specification with:
+- `SUMMARY`: Event title
+- `DESCRIPTION`: Event description
+- `LOCATION`: Event location
+- `DTSTART`: Start datetime
+- `DTEND`: End datetime

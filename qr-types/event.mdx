@@ -1,0 +1,264 @@
+---
+title: 'Calendar Event QR Codes'
+description: 'Generate QR codes for calendar events (iCalendar format)'
+icon: 'calendar'
+---
+
+## Overview
+
+Event QR codes encode calendar events in the iCalendar (vCalendar) format. When scanned, most smartphones automatically recognize the event format and offer to add it to the device's calendar app. This is ideal for event invitations, meeting reminders, conference schedules, and appointment cards.
+
+## Data Structure
+
+Event QR codes use the `EventQrData` interface:
+
+```typescript
+export interface EventQrData {
+  title: string;
+  description: string;
+  location: string;
+  start: string;
+  end: string;
+}
+```
+
+<ParamField path="title" type="string" required>
+  The event name or title. This is a required field.
+</ParamField>
+
+<ParamField path="description" type="string">
+  Detailed description of the event. Optional but recommended for providing context.
+</ParamField>
+
+<ParamField path="location" type="string" required>
+  The event venue or location. This is a required field.
+</ParamField>
+
+<ParamField path="start" type="string" required>
+  Event start date and time in ISO 8601 format (e.g., "2024-03-15 14:30" or "2024-03-15T14:30:00"). Must be a valid date/time.
+</ParamField>
+
+<ParamField path="end" type="string" required>
+  Event end date and time in ISO 8601 format. Must be a valid date/time and must be after the start time.
+</ParamField>
+
+## Encoding Format
+
+The event encoder (from `/src/domain/encoders/encoders.ts:76-97`) creates an iCalendar (VCALENDAR) formatted string:
+
+```typescript
+const encodeEvent = (data: EventQrData) => {
+  const lines: string[] = ["BEGIN:VCALENDAR", "VERSION:2.0", "BEGIN:VEVENT"];
+
+  lines.push(`SUMMARY:${data.title.trim()}`);
+  
+  if (data.description?.trim()) {
+    lines.push(`DESCRIPTION:${data.description.trim()}`);
+  }
+  
+  lines.push(`LOCATION:${data.location.trim()}`);
+
+  const formatDateTime = (dateTimeStr: string): string => {
+    return dateTimeStr.replace(/[-:]/g, "").replace(" ", "T");
+  };
+
+  lines.push(`DTSTART:${formatDateTime(data.start)}`);
+  lines.push(`DTEND:${formatDateTime(data.end)}`);
+
+  lines.push("END:VEVENT", "END:VCALENDAR");
+
+  return lines.join("\n");
+};
+```
+
+### iCalendar Format Specification
+
+The encoded event follows the VCALENDAR 2.0 structure:
+
+```
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:<title>
+DESCRIPTION:<description>
+LOCATION:<location>
+DTSTART:<formatted_start>
+DTEND:<formatted_end>
+END:VEVENT
+END:VCALENDAR
+```
+
+### DateTime Formatting
+
+The encoder converts standard datetime strings to iCalendar format:
+- Removes all dashes (`-`) and colons (`:`)
+- Replaces space with `T` to separate date and time
+- Format: `YYYYMMDDTHHmmss`
+
+**Examples:**
+- `"2024-03-15 14:30"` → `"20240315T1430"`
+- `"2024-03-15T14:30:00"` → `"20240315T143000"`
+
+### Example Encoding
+
+Input:
+```typescript
+{
+  title: "Team Meeting",
+  description: "Monthly team sync to discuss project updates and roadmap",
+  location: "Conference Room A, 5th Floor",
+  start: "2024-03-15 14:00",
+  end: "2024-03-15 15:30"
+}
+```
+
+Output:
+```
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Team Meeting
+DESCRIPTION:Monthly team sync to discuss project updates and roadmap
+LOCATION:Conference Room A, 5th Floor
+DTSTART:20240315T1400
+DTEND:20240315T1530
+END:VEVENT
+END:VCALENDAR
+```
+
+## Validation Rules
+
+The validator (from `/src/domain/validation/validators.ts:170-210`) enforces these requirements:
+
+<AccordionGroup>
+  <Accordion title="Required Fields">
+    The following fields cannot be empty or whitespace only:
+    - `title` - "El título es obligatorio"
+    - `location` - "La ubicación es obligatoria"
+    - `start` - "La fecha de inicio es obligatoria"
+    - `end` - "La fecha de fin es obligatoria"
+  </Accordion>
+
+  <Accordion title="Date/Time Format Validation">
+    Both `start` and `end` must be valid dates:
+    - Must be parseable by JavaScript's `Date()` constructor
+    - If invalid, errors are returned:
+      - "Fecha de inicio inválida"
+      - "Fecha de fin inválida"
+  </Accordion>
+
+  <Accordion title="Logical Date Order">
+    The end time must be after the start time:
+    - `end` must have a later timestamp than `start`
+    - If `end` is equal to or before `start`:
+      - Error: "La fecha de fin debe ser posterior a la de inicio"
+  </Accordion>
+</AccordionGroup>
+
+### Validation Implementation
+
+```typescript
+export const validateEventQr = (data: EventQrData): ValidationResult => {
+  const errors: Record<string, string> = {};
+
+  if (!data.title || data.title.trim() === "") {
+    errors.title = "El título es obligatorio";
+  }
+
+  if (!data.location || data.location.trim() === "") {
+    errors.location = "La ubicación es obligatoria";
+  }
+
+  if (!data.start || data.start.trim() === "") {
+    errors.start = "La fecha de inicio es obligatoria";
+  }
+
+  if (!data.end || data.end.trim() === "") {
+    errors.end = "La fecha de fin es obligatoria";
+  }
+
+  if (data.start && data.end) {
+    const startDate = new Date(data.start);
+    const endDate = new Date(data.end);
+
+    if (isNaN(startDate.getTime())) {
+      errors.start = "Fecha de inicio inválida";
+    }
+
+    if (isNaN(endDate.getTime())) {
+      errors.end = "Fecha de fin inválida";
+    }
+
+    if (startDate.getTime() >= endDate.getTime()) {
+      errors.end = "La fecha de fin debe ser posterior a la de inicio";
+    }
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+```
+
+## Usage Example
+
+```typescript
+import { QrTypeKey } from "./domain/types/qr";
+import type { EventQrData } from "./domain/types/qr";
+import { encodeQrData } from "./domain/encoders/encoders";
+import { validateEventQr } from "./domain/validation/validators";
+
+// Create event QR data
+const eventData: EventQrData = {
+  title: "Product Launch Event",
+  description: "Join us for the unveiling of our latest innovation",
+  location: "Tech Hub Auditorium, 123 Innovation Drive",
+  start: "2024-04-20 18:00",
+  end: "2024-04-20 21:00"
+};
+
+// Validate the data
+const validation = validateEventQr(eventData);
+if (!validation.isValid) {
+  console.error("Validation errors:", validation.errors);
+}
+
+// Encode the data
+const encodedEvent = encodeQrData(QrTypeKey.Event, eventData);
+```
+
+## Common Use Cases
+
+- **Event Invitations**: Add to invitations for conferences, parties, or gatherings
+- **Meeting Scheduling**: Share meeting times in emails or Slack messages
+- **Conference Schedules**: Provide session details at conferences
+- **Appointment Cards**: Medical, dental, or service appointment reminders
+- **Webinar Registration**: Share webinar date and link
+- **Workshop/Training**: Distribute training session details
+- **Trade Shows**: Share booth visit times and locations
+
+## Best Practices
+
+<Tip>
+  Use clear, descriptive titles and include a description to provide context about the event.
+</Tip>
+
+- **Title**: Keep it concise but descriptive (e.g., "Q1 Planning Meeting" vs "Meeting")
+- **Description**: Include agenda items, requirements, or what to bring
+- **Location**: Provide specific details (room number, floor, building name)
+- **Timing**: Ensure dates are in the future and verify timezone considerations
+- **Duration**: Allow adequate time between start and end
+
+## DateTime Input Formats
+
+The validator accepts any format parseable by JavaScript's `Date()` constructor:
+
+- `"2024-03-15 14:30"` - Space-separated date and time
+- `"2024-03-15T14:30:00"` - ISO 8601 format
+- `"2024-03-15T14:30:00.000Z"` - ISO 8601 with milliseconds and UTC
+- `"March 15, 2024 14:30"` - Human-readable format
+
+<Note>
+  For best compatibility, use ISO 8601 format: `YYYY-MM-DD HH:mm` or `YYYY-MM-DDTHH:mm:ss`
+</Note>

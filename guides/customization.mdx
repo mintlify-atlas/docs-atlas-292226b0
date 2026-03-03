@@ -1,0 +1,197 @@
+---
+title: Customizing QR Codes
+description: Learn how to customize the appearance of your QR codes in Atomix QRGen
+---
+
+## QR Code Styling
+
+Atomix QRGen uses the `qr-code-styling` library to generate customizable QR codes. Currently, the application provides a default styling configuration optimized for readability and scannability.
+
+### Default Configuration
+
+The QR codes are generated with the following settings:
+
+```typescript
+new QRCodeStyling({
+  width: 280,
+  height: 280,
+  data: "",
+  dotsOptions: { type: "rounded", color: "#000" },
+  backgroundOptions: { color: "#ffffff" },
+})
+```
+
+**Reference:** `src/components/qr-code-app/cards/qr-preview/card-qr-preview.tsx:27-33`
+
+### Current Features
+
+<CardGroup cols={2}>
+  <Card title="Size" icon="ruler">
+    Fixed at 280x280 pixels for optimal scanning
+  </Card>
+  <Card title="Dot Style" icon="circle">
+    Rounded dots for a modern, friendly appearance
+  </Card>
+  <Card title="Colors" icon="palette">
+    Black dots on white background for maximum contrast
+  </Card>
+  <Card title="Error Correction" icon="shield">
+    Level M (15%) for balance between size and reliability
+  </Card>
+</CardGroup>
+
+### Available Customization Options
+
+The `qr-code-styling` library supports extensive customization. Here are the options that could be implemented:
+
+<AccordionGroup>
+  <Accordion title="Dot Patterns">
+    The library supports multiple dot styles:
+    - `rounded` (current default)
+    - `dots`
+    - `classy`
+    - `classy-rounded`
+    - `square`
+    - `extra-rounded`
+
+    <Note>
+    Different dot patterns can affect scanability. Always test QR codes after changing the pattern.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Colors">
+    You can customize:
+    - **Dot color** - Currently `#000` (black)
+    - **Background color** - Currently `#ffffff` (white)
+    - **Gradient colors** - For advanced styling
+
+    <Warning>
+    Ensure sufficient contrast between dots and background. Light-colored dots on light backgrounds will not scan properly.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Corner Squares">
+    Customize the three corner squares (position detection patterns):
+    ```typescript
+    cornersSquareOptions: {
+      type: 'dot' | 'square' | 'extra-rounded',
+      color: '#000000'
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Corner Dots">
+    Style the dots inside corner squares:
+    ```typescript
+    cornersDotOptions: {
+      type: 'dot' | 'square',
+      color: '#000000'
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Logo/Image">
+    Add a logo to the center of your QR code:
+    ```typescript
+    image: 'path/to/logo.png',
+    imageOptions: {
+      hideBackgroundDots: true,
+      imageSize: 0.4,
+      margin: 0
+    }
+    ```
+
+    <Tip>
+    Keep logos small (0.2-0.4 size ratio) to maintain scanability. The error correction helps preserve readability even with a centered image.
+    </Tip>
+  </Accordion>
+</AccordionGroup>
+
+### Error Correction Levels
+
+The application currently uses error correction Level M (15%), visible in the preview card:
+
+```tsx
+<div class="flex justify-between">
+  <span class="text-gray-600">Corrección</span>
+  <span class="font-medium text-gray-900">Nivel M (15%)</span>
+</div>
+```
+
+**Reference:** `src/components/qr-code-app/cards/qr-preview/card-qr-preview.tsx:330-332`
+
+<Note>
+Error correction levels determine how much of the QR code can be damaged while still being readable:
+- **L (Low)**: 7% recovery
+- **M (Medium)**: 15% recovery (current)
+- **Q (Quartile)**: 25% recovery
+- **H (High)**: 30% recovery
+
+Higher levels allow for more customization (like logos) but create larger QR codes.
+</Note>
+
+### Future Customization
+
+To implement custom styling in your fork of Atomix QRGen, you would modify the `QRCodeStyling` initialization in `card-qr-preview.tsx`:
+
+<Steps>
+  <Step title="Add state for customization options">
+    ```typescript
+    const [dotStyle, setDotStyle] = useState<'rounded' | 'square' | 'dots'>('rounded');
+    const [dotColor, setDotColor] = useState('#000000');
+    const [bgColor, setBgColor] = useState('#ffffff');
+    ```
+  </Step>
+
+  <Step title="Update QRCodeStyling configuration">
+    ```typescript
+    qr.current = new QRCodeStyling({
+      width: 280,
+      height: 280,
+      data: "",
+      dotsOptions: { type: dotStyle, color: dotColor },
+      backgroundOptions: { color: bgColor },
+    });
+    ```
+  </Step>
+
+  <Step title="Add UI controls">
+    Create color pickers and style selectors in the preview card UI to allow users to customize their QR codes in real-time.
+  </Step>
+
+  <Step title="Update QR code on changes">
+    ```typescript
+    useEffect(() => {
+      if (qr.current) {
+        qr.current.update({
+          dotsOptions: { type: dotStyle, color: dotColor },
+          backgroundOptions: { color: bgColor },
+        });
+      }
+    }, [dotStyle, dotColor, bgColor]);
+    ```
+  </Step>
+</Steps>
+
+### Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test Scanability" icon="mobile">
+    Always test your QR codes with multiple scanning apps and devices before using them in production.
+  </Card>
+  <Card title="Maintain Contrast" icon="adjust">
+    Ensure at least a 3:1 contrast ratio between dots and background for reliable scanning.
+  </Card>
+  <Card title="Consider Context" icon="eye">
+    Choose colors and styles appropriate for where the QR code will be displayed (print, screen, etc.).
+  </Card>
+  <Card title="Keep It Simple" icon="sparkles">
+    Simpler designs scan more reliably. Avoid overly complex customizations for critical use cases.
+  </Card>
+</CardGroup>
+
+## Related Resources
+
+- [qr-code-styling GitHub Repository](https://github.com/kozakdenys/qr-code-styling)
+- [Downloading QR Codes](/guides/downloading)
+- [Privacy & Security](/guides/privacy-security)

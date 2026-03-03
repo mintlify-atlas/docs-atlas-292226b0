@@ -1,0 +1,427 @@
+---
+title: Components
+description: Component overview and structure in Atomix QRGen
+---
+
+## Component Architecture
+
+Atomix QRGen uses a hybrid architecture combining **Astro components** (.astro) for static content and **Preact components** (.tsx) for interactive features.
+
+## Component Hierarchy
+
+```
+index.astro
+└── RootLayout.astro
+    └── qr-code-generator.astro
+        └── QrGenApp.tsx (Preact)
+            ├── CardQrType.tsx
+            ├── CardContentInput.tsx
+            │   └── [Dynamic Form Component]
+            │       ├── TextForm.tsx
+            │       ├── UrlForm.tsx
+            │       ├── WifiForm.tsx
+            │       ├── VCardForm.tsx
+            │       ├── EventForm.tsx
+            │       └── PaymentForm.tsx
+            └── CardQrPreview.tsx
+```
+
+## Astro Components
+
+Astro components render server-side at build time and produce static HTML.
+
+### RootLayout.astro
+
+**Location:** `src/layouts/RootLayout.astro`
+
+**Purpose:** Provides the global HTML structure for all pages.
+
+**Features:**
+- HTML head with SEO metadata
+- Favicon configuration (16x16, 32x32, 64x64, 120x120)
+- Viewport configuration for responsive design
+- Global CSS import
+- Body styling (Rubik font, slate-900 background)
+
+**Props:**
+```typescript
+interface Props {
+  title?: string;          // Default: "QrGen | Atomix"
+  description?: string;    // Default: "Generate QR codes instantly with Atomix."
+}
+```
+
+### qr-code-generator.astro
+
+**Location:** `src/components/pages/qr-code-generator.astro`
+
+**Purpose:** Page wrapper component that bridges Astro and Preact.
+
+**Responsibility:** Wraps the Preact `QrGenApp` component with `client:load` directive for hydration.
+
+## Preact Components
+
+Preact components provide client-side interactivity.
+
+### QrGenApp (Root Component)
+
+**Location:** `src/components/qr-code-app/app/qr-gen-app.tsx`
+
+**Purpose:** Main application logic and state management.
+
+**State:**
+```typescript
+const [type, setType] = useState<QrTypeKey | null>(null);
+const [data, setData] = useState<QrDataUnion | null>(null);
+```
+
+**Responsibilities:**
+- Manages selected QR type
+- Manages form data for current QR type
+- Coordinates data flow between child components
+
+**Component Structure:**
+```tsx
+export default function QrGenApp() {
+  const [type, setType] = useState<QrTypeKey | null>(null);
+  const [data, setData] = useState<QrDataUnion | null>(null);
+
+  return (
+    <>
+      <CardQrType selected={type} onSelect={setType} />
+      <CardContentInput selectedType={type} onChange={setData} />
+      <CardQrPreview type={type} data={data} />
+    </>
+  );
+}
+```
+
+### CardQrType
+
+**Location:** `src/components/qr-code-app/cards/qr-types/card-qr-type.tsx`
+
+**Purpose:** QR type selector displaying all available QR formats.
+
+**Props:**
+```typescript
+interface CardQrTypeProps {
+  selected: QrTypeKey | null;
+  onSelect: (key: QrTypeKey) => void;
+}
+```
+
+**Features:**
+- Displays 6 QR type options with icons
+- Visual feedback for selected type
+- Disabled state for upcoming features (Payment, Event)
+- Responsive hover states
+- Icon filtering based on selection state
+
+**QR Types:**
+1. **Plain Text** (PT) - Simple text content
+2. **URL** (UL) - Website links
+3. **WiFi** (WF) - Network credentials
+4. **vCard** (VC) - Contact information
+5. **Payment** (PB) - Payment requests (Coming soon)
+6. **Event** (EV) - Calendar events (Coming soon)
+
+**Styling States:**
+- **Unselected (no selection)**: Gray with blue hover
+- **Selected**: Blue background with white text
+- **Unselected (has selection)**: Faded gray with light hover
+- **Disabled**: Light gray with "Soon" badge
+
+### CardContentInput
+
+**Location:** `src/components/qr-code-app/cards/content-input-card/card-content-input.tsx`
+
+**Purpose:** Dynamic form container that renders the appropriate form based on selected QR type.
+
+**Props:**
+```typescript
+interface CardContentInputProps {
+  selectedType: QrTypeKey | null;
+  onChange?: (data: QrDataUnion | null) => void;
+}
+```
+
+**Logic:**
+```typescript
+const Form = selectedType ? formRegistry[selectedType] : null;
+const [key, setKey] = useState(0);
+
+useEffect(() => {
+  if (selectedType) {
+    setKey((prev) => prev + 1);  // Force re-mount on type change
+    onChange?.(null);             // Reset data
+  }
+}, [selectedType]);
+```
+
+**Features:**
+- Uses form registry for dynamic component selection
+- Resets form when QR type changes (via key prop)
+- Displays placeholder text when no type is selected
+- Propagates form data changes to parent
+
+### CardQrPreview
+
+**Location:** `src/components/qr-code-app/cards/qr-preview/card-qr-preview.tsx`
+
+**Purpose:** Displays generated QR code and provides download functionality.
+
+**Props:**
+```typescript
+interface CardQrPreviewProps {
+  type: QrTypeKey | null;
+  data: QrDataUnion | null;
+}
+```
+
+**Features:**
+- Real-time QR code generation using `qr-code-styling`
+- Validates data before generating QR code
+- Download QR code as PNG image
+- Toast notifications for success/error states
+- Responsive QR code sizing
+
+**Key Logic:**
+- Encodes data using appropriate encoder
+- Validates encoded data
+- Generates QR code with styling options
+- Handles download with dynamic filename
+
+## Form Components
+
+Each form component follows a consistent pattern using the `useFormData` hook.
+
+### Common Form Pattern
+
+```typescript
+import { useFormData } from "../../../domain/hooks/use-form-data";
+import { validate[Type]Qr } from "../../../domain/validation/validators";
+import FormInput from "../shared/form-input";
+import type { [Type]QrData } from "../../../domain/types/qr";
+
+interface [Type]FormProps {
+  onChange?: (data: [Type]QrData) => void;
+}
+
+export default function [Type]Form({ onChange }: [Type]FormProps) {
+  const { data, errors, handleBlur, handleUpdate } = useFormData<[Type]QrData>({
+    initialData: { /* initial values */ },
+    onChange,
+    validate: validate[Type]Qr,
+  });
+
+  return (
+    <>
+      <FormInput
+        label="Field Label"
+        type="text"
+        value={data.fieldName}
+        onInput={(e) => handleUpdate("fieldName", getInputValue(e))}
+        onBlur={handleBlur}
+        error={errors.fieldName}
+        required
+      />
+    </>
+  );
+}
+```
+
+### UrlForm
+
+**Location:** `src/components/forms/url/url-form.tsx`
+
+**Fields:**
+- URL (required)
+
+**Validation:**
+- Required field check
+- Valid URL format
+- Automatic protocol addition (https://)
+
+### TextForm
+
+**Location:** `src/components/forms/text/text-form.tsx`
+
+**Fields:**
+- Text content (required, textarea)
+
+**Validation:**
+- Minimum 1 character
+- Maximum 2953 characters (QR code limit)
+
+### WifiForm
+
+**Location:** `src/components/forms/wifi/wifi-form.tsx`
+
+**Fields:**
+- SSID (required)
+- Password (conditional)
+- Security type (WPA, WEP, or No password)
+
+**Validation:**
+- SSID required, max 32 characters
+- Password required for WPA/WEP
+- WEP: minimum 5 characters
+- WPA: minimum 8 characters
+- Max 63 characters for passwords
+
+### VCardForm
+
+**Location:** `src/components/forms/v-card-form/v-card-form.tsx`
+
+**Fields:**
+- First Name (required)
+- Last Name (required)
+- Phone (optional)
+- Mobile (optional)
+- Email (optional)
+- Organization (optional)
+- Title (optional)
+- Website (optional)
+- Address (optional)
+- Note (optional)
+
+**Validation:**
+- First and last name required
+- Phone and mobile validated with regex
+- Email format validation
+- Website URL validation
+
+### EventForm
+
+**Location:** `src/components/forms/event-form/event-form.tsx`
+
+**Fields:**
+- Title (required)
+- Description (optional)
+- Location (required)
+- Start date/time (required)
+- End date/time (required)
+
+**Validation:**
+- All required fields present
+- Valid datetime formats
+- End time after start time
+
+### PaymentForm
+
+**Location:** `src/components/forms/payment-form/payment-form.tsx`
+
+**Fields:**
+- Payment method (required)
+- Recipient name (required)
+- Account/Address (required)
+- Bank/Platform (required)
+- Amount (required)
+- Reference (optional)
+
+**Validation:**
+- All required fields present
+- Amount greater than 0
+- Account format based on payment method
+- Crypto address validation (min 26 characters)
+
+### FormInput (Shared Component)
+
+**Location:** `src/components/forms/shared/form-input.tsx`
+
+**Purpose:** Reusable input component with consistent styling and error display.
+
+**Props:**
+```typescript
+interface FormInputProps {
+  label: string;
+  type?: string;           // Default: "text"
+  placeholder?: string;
+  value: string | number;
+  onInput?: (e: Event) => void;
+  onChange?: (e: Event) => void;
+  onBlur?: (e: Event) => void;
+  required?: boolean;      // Shows red asterisk
+  error?: string;          // Displays error message
+  maxLength?: number;
+  min?: number;
+  rows?: number;           // If set, renders textarea
+}
+```
+
+**Features:**
+- Supports both input and textarea
+- Required field indicator (red asterisk)
+- Error message display
+- Consistent focus and hover states
+- Tailwind-based styling with blue accent color
+
+## Component Communication
+
+### Props Down, Events Up Pattern
+
+Components follow React/Preact best practices:
+
+```typescript
+// Parent passes data down via props
+<CardQrType selected={type} onSelect={setType} />
+
+// Child communicates changes up via callbacks
+const CardQrType = ({ selected, onSelect }: CardQrTypeProps) => {
+  return <button onClick={() => onSelect(type.key)}>...</button>
+}
+```
+
+### Form Registry Pattern
+
+Dynamic component selection using object mapping:
+
+```typescript
+// src/domain/form/form-registry.ts
+export const formRegistry = {
+  [QrTypeKey.PlainText]: TextForm,
+  [QrTypeKey.Url]: UrlForm,
+  // ...
+};
+
+// src/components/qr-code-app/cards/content-input-card/card-content-input.tsx
+const Form = selectedType ? formRegistry[selectedType] : null;
+return Form ? <Form onChange={onChange} /> : <Placeholder />;
+```
+
+This pattern:
+- Eliminates large switch/if-else statements
+- Makes adding new QR types straightforward
+- Provides type safety with TypeScript
+- Enables code splitting per form component
+
+## Styling Approach
+
+All components use Tailwind CSS utility classes:
+
+**Card Pattern:**
+```tsx
+<article class="bg-white rounded-xl border border-gray-200 p-6 shadow-[20px_5px_30px_rgba(0,0,0,0.4)] transition h-fit">
+```
+
+**Input Pattern:**
+```tsx
+<input class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 hover:border-[#0352D1] focus:outline-none focus:ring-2 focus:ring-[#0352D1]" />
+```
+
+**Color Scheme:**
+- Primary: `#0352D1` (Blue)
+- Background: Slate-900
+- Cards: White with gray borders
+- Text: Gray-900 (dark) / White (on dark backgrounds)
+- Error: Red-500
+
+## Component Best Practices
+
+1. **Single Responsibility**: Each component has one clear purpose
+2. **Type Safety**: All components use TypeScript interfaces
+3. **Controlled Components**: Forms use controlled inputs via `useFormData`
+4. **Validation Separation**: Validation logic in domain layer, not components
+5. **Reusability**: Shared components (`FormInput`) reduce duplication
+6. **Prop Drilling Alternative**: Form registry pattern instead of passing many components as props
+7. **Key-based Reset**: Use key prop to force component re-mount when needed

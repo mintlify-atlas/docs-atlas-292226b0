@@ -1,0 +1,122 @@
+---
+title: Introduction
+description: Modern, privacy-focused QR code generator supporting multiple formats with 100% client-side generation
+---
+
+<img
+  className="block dark:hidden"
+  src="/images/hero-light.png"
+  alt="Atomix QRGen Hero Light"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/hero-dark.png"
+  alt="Atomix QRGen Hero Dark"
+/>
+
+## Welcome to Atomix QRGen
+
+Atomix QRGen is a modern, privacy-focused QR code generator built with Astro, Preact, and Tailwind CSS. Generate customizable QR codes for multiple formats including URLs, WiFi credentials, vCards, calendar events, payment information, and plain text — all fully client-side.
+
+**No tracking. No backend. No stored data.**
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card
+    title="Multiple QR formats"
+    icon="qrcode"
+  >
+    Support for URL, Text, WiFi, vCard, Event, and Payment QR codes with format-specific validation
+  </Card>
+  <Card
+    title="Privacy-first"
+    icon="shield-check"
+  >
+    100% client-side generation means your data never leaves your browser - no servers, no tracking
+  </Card>
+  <Card
+    title="Real-time preview"
+    icon="eye"
+  >
+    See your QR code update instantly as you type with live validation feedback
+  </Card>
+  <Card
+    title="Export & print"
+    icon="download"
+  >
+    Download QR codes as PNG or SVG, or print them directly from your browser
+  </Card>
+</CardGroup>
+
+## Technology stack
+
+Atomix QRGen leverages modern web technologies for optimal performance:
+
+- **[Astro](https://astro.build)** - Static site generator with partial hydration for minimal JavaScript
+- **[Preact](https://preactjs.com)** - Lightweight React alternative (3KB) for interactive components
+- **[Tailwind CSS](https://tailwindcss.com)** - Utility-first CSS framework for responsive design
+- **[qr-code-styling](https://github.com/kozakdenys/qr-code-styling)** - Customizable QR code generation library
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Generate your first QR code in seconds using the web app
+  </Card>
+  <Card
+    title="Installation"
+    icon="code"
+    href="/installation"
+  >
+    Set up the development environment and run locally
+  </Card>
+  <Card
+    title="QR types"
+    icon="list"
+    href="/qr-types/url"
+  >
+    Explore all supported QR code formats and their data structures
+  </Card>
+  <Card
+    title="API reference"
+    icon="book"
+    href="/api/encoders"
+  >
+    Deep dive into encoders, validators, and component APIs
+  </Card>
+</CardGroup>
+
+## Why client-side?
+
+Generating QR codes entirely in the browser provides several advantages:
+
+<AccordionGroup>
+  <Accordion title="Privacy & security">
+    Your sensitive data (WiFi passwords, payment details, contact info) never leaves your device. No server storage means no data breaches or privacy concerns.
+  </Accordion>
+  
+  <Accordion title="Zero latency">
+    QR codes generate instantly without network roundtrips. Works perfectly offline once the page is loaded.
+  </Accordion>
+  
+  <Accordion title="Cost-effective hosting">
+    Static site deployment is cheap or free. No backend infrastructure, databases, or server maintenance required.
+  </Accordion>
+  
+  <Accordion title="Full transparency">
+    Open source code means you can verify exactly what happens with your data. No hidden tracking or analytics.
+  </Accordion>
+</AccordionGroup>
+
+## Support
+
+Atomix QRGen is open source and community-driven. Found a bug or have a feature request?
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/Ephistopheles/atomix-qrgen/issues)
+- **Email**: [rjohanamed@gmail.com](mailto:rjohanamed@gmail.com)
+- **License**: MIT - free to use, modify, and distribute

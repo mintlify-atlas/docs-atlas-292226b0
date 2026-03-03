@@ -1,0 +1,120 @@
+---
+title: 'Plain Text QR Codes'
+description: 'Generate QR codes containing plain text content'
+icon: 'font'
+---
+
+## Overview
+
+Plain text QR codes encode simple text strings that are displayed to the user when scanned. Unlike URL QR codes that open a browser, text QR codes simply show the encoded message on the scanning device's screen. This is useful for sharing messages, instructions, serial numbers, or any textual information.
+
+## Data Structure
+
+Plain text QR codes use the `TextQrData` interface:
+
+```typescript
+export interface TextQrData {
+  text: string;
+}
+```
+
+<ParamField path="text" type="string" required>
+  The text content to encode in the QR code. Can contain any characters, but must be between 1 and 2953 characters in length.
+</ParamField>
+
+## Encoding Format
+
+The text encoder (from `/src/domain/encoders/encoders.ts:11-13`) is straightforward:
+
+```typescript
+const encodeText = (data: TextQrData) => {
+  return data.text.trim();
+};
+```
+
+The encoding simply trims leading and trailing whitespace from the input text. The resulting string is directly encoded into the QR code.
+
+## Validation Rules
+
+The validator (from `/src/domain/validation/validators.ts:39-54`) enforces these requirements:
+
+<AccordionGroup>
+  <Accordion title="Required Field">
+    - The `text` field cannot be empty or contain only whitespace
+    - Error message: "El texto es obligatorio"
+  </Accordion>
+
+  <Accordion title="Minimum Length">
+    - After trimming, the text must have at least 1 character
+    - Error message: "El texto debe tener al menos 1 carácter"
+  </Accordion>
+
+  <Accordion title="Maximum Length">
+    - The text cannot exceed 2953 characters
+    - This limit ensures the QR code remains scannable
+    - Error message: "El texto es demasiado largo (máximo 2953 caracteres)"
+  </Accordion>
+</AccordionGroup>
+
+### Validation Implementation
+
+```typescript
+export const validateTextQr = (data: TextQrData): ValidationResult => {
+  const errors: Record<string, string> = {};
+
+  if (!data.text || data.text.trim() === "") {
+    errors.text = "El texto es obligatorio";
+  } else if (data.text.trim().length < 1) {
+    errors.text = "El texto debe tener al menos 1 carácter";
+  } else if (data.text.length > 2953) {
+    errors.text = "El texto es demasiado largo (máximo 2953 caracteres)";
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+```
+
+## Usage Example
+
+```typescript
+import { QrTypeKey } from "./domain/types/qr";
+import type { TextQrData } from "./domain/types/qr";
+import { encodeQrData } from "./domain/encoders/encoders";
+import { validateTextQr } from "./domain/validation/validators";
+
+// Create text QR data
+const textData: TextQrData = {
+  text: "Welcome to Atomix QRGen! Scan this code to get started."
+};
+
+// Validate the data
+const validation = validateTextQr(textData);
+if (!validation.isValid) {
+  console.error("Validation errors:", validation.errors);
+}
+
+// Encode the data
+const encodedText = encodeQrData(QrTypeKey.PlainText, textData);
+// Result: "Welcome to Atomix QRGen! Scan this code to get started."
+```
+
+## Common Use Cases
+
+- **Instructions**: Embed assembly or usage instructions
+- **Serial Numbers**: Share product serial numbers or license keys
+- **Messages**: Display welcome messages or information
+- **Codes**: Share access codes, passwords, or reference numbers
+- **Descriptions**: Provide product descriptions or specifications
+- **Quotes**: Share memorable quotes or messages
+
+## Character Limit Considerations
+
+While the maximum character limit is 2953, keep in mind:
+
+- Longer text creates denser, more complex QR codes
+- Very dense QR codes may be harder to scan, especially from a distance
+- For best scannability, keep text concise (under 500 characters recommended)
+- Consider breaking very long content into multiple QR codes

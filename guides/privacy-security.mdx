@@ -1,0 +1,393 @@
+---
+title: Privacy & Security
+description: Learn how Atomix QRGen protects your privacy with client-side generation
+---
+
+## Client-Side Architecture
+
+Atomix QRGen is built with privacy as a core principle. All QR code generation happens entirely in your browser - no servers, no databases, no data transmission.
+
+<CardGroup cols={2}>
+  <Card title="100% Client-Side" icon="laptop">
+    All processing happens in your browser using JavaScript
+  </Card>
+  <Card title="No Backend" icon="server">
+    No servers receive or store your data
+  </Card>
+  <Card title="No Tracking" icon="eye-slash">
+    No analytics, cookies, or user tracking
+  </Card>
+  <Card title="No Storage" icon="database">
+    Data is never saved to disk or cloud
+  </Card>
+</CardGroup>
+
+## How It Works
+
+<Steps>
+  <Step title="Static Site Delivery">
+    When you visit Atomix QRGen, you download a static HTML/CSS/JavaScript bundle built with Astro. This is the only network request made to load the application.
+  </Step>
+
+  <Step title="Local Processing">
+    All form data you enter is processed locally in your browser using Preact components. The data never leaves your device.
+    
+    ```typescript
+    // State is managed locally in the browser
+    const [type, setType] = useState<QrTypeKey | null>(null);
+    const [data, setData] = useState<QrDataUnion | null>(null);
+    ```
+    
+    **Reference:** `src/components/qr-code-app/app/qr-gen-app.tsx:8-9`
+  </Step>
+
+  <Step title="Client-Side Encoding">
+    Your data is encoded into QR format using local encoding functions. For example, WiFi credentials are formatted client-side:
+    
+    ```typescript
+    const encodeWifi = (data: WifiQrData) => {
+      const password = data.security === "nopass" ? "" : data.password.trim();
+      return `WIFI:T:${data.security};S:${data.ssid.trim()};P:${password};;`;
+    };
+    ```
+    
+    **Reference:** `src/domain/encoders/encoders.ts:25-28`
+  </Step>
+
+  <Step title="Local QR Generation">
+    The `qr-code-styling` library generates the QR code image directly in your browser:
+    
+    ```typescript
+    qr.current = new QRCodeStyling({
+      width: 280,
+      height: 280,
+      data: "",
+      dotsOptions: { type: "rounded", color: "#000" },
+      backgroundOptions: { color: "#ffffff" },
+    });
+    ```
+    
+    **Reference:** `src/components/qr-code-app/cards/qr-preview/card-qr-preview.tsx:27-33`
+  </Step>
+
+  <Step title="Client-Side Download">
+    Downloads are triggered using the browser's native download API. The file is created and saved directly from browser memory:
+    
+    ```typescript
+    await qr.current.download({
+      name: fileName,
+      extension: format,
+    });
+    ```
+    
+    **Reference:** `src/components/qr-code-app/cards/qr-preview/card-qr-preview.tsx:98-101`
+  </Step>
+</Steps>
+
+<Info>
+The entire application runs on your device. Even your browser's Developer Tools Network tab will show zero network requests after the initial page load.
+</Info>
+
+## Privacy Features
+
+### No Data Transmission
+
+Unlike many online QR generators that send your data to a server for processing, Atomix QRGen processes everything locally:
+
+```typescript
+export const encodeQrData = (
+  type: QrTypeKey,
+  data:
+    | TextQrData
+    | UrlQrData
+    | WifiQrData
+    | VCardQrData
+    | PaymentQrData
+    | EventQrData,
+) => {
+  switch (type) {
+    case QrTypeKey.PlainText:
+      return encodeText(data as TextQrData);
+    case QrTypeKey.Url:
+      return encodeUrl(data as UrlQrData);
+    case QrTypeKey.Wifi:
+      return encodeWifi(data as WifiQrData);
+    case QrTypeKey.VCard:
+      return encodeVCard(data as VCardQrData);
+    case QrTypeKey.Payment:
+      return encodePayment(data as PaymentQrData);
+    case QrTypeKey.Event:
+      return encodeEvent(data as EventQrData);
+    default:
+      return "";
+  }
+};
+```
+
+**Reference:** `src/domain/encoders/encoders.ts:99-125`
+
+All encoding logic is pure TypeScript functions that run in your browser.
+
+### No Analytics or Tracking
+
+The application includes:
+- No Google Analytics
+- No Facebook Pixel
+- No third-party tracking scripts
+- No cookies (except essential browser session cookies)
+- No fingerprinting
+- No usage telemetry
+
+<Warning>
+While Atomix QRGen itself doesn't track you, the hosting provider (if using a hosted version) may have basic server logs. For maximum privacy, consider self-hosting or running the application locally.
+</Warning>
+
+### No Local Storage
+
+The application does not store any data in:
+- `localStorage`
+- `sessionStorage`
+- `IndexedDB`
+- Browser cookies
+- Service workers
+
+When you refresh the page, all form data is cleared. This is intentional for privacy.
+
+### Validation Without Transmission
+
+All form validation happens locally before QR generation:
+
+```typescript
+export const validateWifiQr = (data: WifiQrData): ValidationResult => {
+  const errors: Record<string, string> = {};
+
+  if (!data.ssid || data.ssid.trim() === "") {
+    errors.ssid = "El SSID es obligatorio";
+  } else if (data.ssid.trim().length > 32) {
+    errors.ssid = "El SSID no puede tener más de 32 caracteres";
+  }
+
+  if (data.security !== "nopass") {
+    if (!data.password || data.password.trim() === "") {
+      errors.password = "La contraseña es obligatoria para redes con seguridad";
+    } else if (data.security === "WPA" && data.password.length < 8) {
+      errors.password = "La contraseña WPA/WPA2 debe tener al menos 8 caracteres";
+    }
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+```
+
+**Reference:** `src/domain/validation/validators.ts:71-96`
+
+Validation ensures data quality without ever sending it to a server.
+
+## Security Benefits
+
+### Protection of Sensitive Information
+
+Atomix QRGen is perfect for generating QR codes containing sensitive data:
+
+<CardGroup cols={2}>
+  <Card title="WiFi Passwords" icon="wifi">
+    Generate WiFi QR codes without exposing your password to third parties
+  </Card>
+  <Card title="Payment Details" icon="credit-card">
+    Create payment QR codes without sharing account numbers with servers
+  </Card>
+  <Card title="Contact Information" icon="address-card">
+    Generate vCard QR codes without uploading your contact details
+  </Card>
+  <Card title="Private URLs" icon="link">
+    Create QR codes for internal/private URLs without logging them
+  </Card>
+</CardGroup>
+
+<Note>
+Since all processing is client-side, you can safely use Atomix QRGen for:
+- Corporate WiFi credentials
+- Banking payment information
+- Personal contact details
+- Private event invitations
+- Confidential URLs
+</Note>
+
+### No Server Vulnerabilities
+
+Because there's no backend:
+- No database to be breached
+- No server logs containing your data
+- No API endpoints to be exploited
+- No risk of data retention policies
+- No third-party data processors
+
+### Open Source Transparency
+
+The entire source code is available on GitHub, allowing you to:
+- Verify there are no hidden data collection
+- Audit the privacy claims
+- Self-host for complete control
+- Modify and customize as needed
+
+## Technology Stack
+
+The privacy-focused architecture is enabled by these technologies:
+
+```json
+{
+  "dependencies": {
+    "@astrojs/preact": "^4.1.3",
+    "astro": "^5.17.1",
+    "preact": "^10.28.3",
+    "qr-code-styling": "^1.9.2",
+    "tailwindcss": "^4.1.18"
+  }
+}
+```
+
+**Reference:** `package.json:31-37`
+
+- **Astro**: Static site generator that pre-renders everything at build time
+- **Preact**: Lightweight React alternative for interactive UI (runs in browser)
+- **qr-code-styling**: Pure JavaScript QR generation library
+- **Tailwind CSS**: CSS framework with no runtime JavaScript
+
+<Tip>
+All dependencies are client-side libraries. There are zero server-side dependencies or runtime requirements.
+</Tip>
+
+## Self-Hosting for Maximum Privacy
+
+For ultimate privacy control, you can self-host Atomix QRGen:
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/Ephistopheles/atomix-qrgen.git
+    cd atomix-qrgen
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    ```bash
+    npm install
+    ```
+  </Step>
+
+  <Step title="Build for Production">
+    ```bash
+    npm run build
+    ```
+    
+    This creates a `dist/` folder with static files.
+  </Step>
+
+  <Step title="Host Locally or Deploy">
+    You can:
+    - Serve locally: `npm run preview`
+    - Deploy to any static host (Netlify, Vercel, GitHub Pages)
+    - Run from `file://` - no server needed!
+    - Host on your internal network
+  </Step>
+</Steps>
+
+<Info>
+Since Atomix QRGen is entirely static, you can even open `dist/index.html` directly in your browser without any web server. Perfect for offline use!
+</Info>
+
+## Offline Usage
+
+Once loaded, Atomix QRGen works completely offline:
+
+1. Visit the site once while online to cache the assets
+2. Disconnect from the internet
+3. Continue generating QR codes
+
+This is possible because:
+- All code is delivered on first load
+- No API calls are made during usage
+- No external resources are fetched
+- All libraries are bundled
+
+<Warning>
+Offline usage requires the page to remain open. Refreshing will require internet to reload the assets (unless you've self-hosted or created a PWA version).
+</Warning>
+
+## Comparison with Server-Based Generators
+
+| Feature | Atomix QRGen | Typical Server-Based |
+|---------|--------------|---------------------|
+| **Data Transmission** | None | All data sent to server |
+| **Server Logs** | No logs | Data may be logged |
+| **Data Storage** | Never stored | Often stored temporarily or permanently |
+| **Privacy Policy** | Not needed | Required (GDPR, etc.) |
+| **Third Parties** | None | May use analytics, CDNs, etc. |
+| **Offline Work** | Yes (after first load) | No |
+| **Self-Hosting** | Easy (static files) | Complex (requires backend) |
+| **Audit Transparency** | Full (open source) | Limited |
+
+## Privacy FAQ
+
+<AccordionGroup>
+  <Accordion title="Can the developer see my data?">
+    No. There is no mechanism for data to be transmitted to anyone. All processing happens exclusively in your browser.
+  </Accordion>
+
+  <Accordion title="Is my data saved anywhere?">
+    No. The application does not use localStorage, sessionStorage, cookies, or any form of persistent storage. When you refresh the page, all data is gone.
+  </Accordion>
+
+  <Accordion title="Does it work offline?">
+    Yes! Once the initial page is loaded, you can disconnect from the internet and continue generating QR codes. All the necessary code is already in your browser.
+  </Accordion>
+
+  <Accordion title="Can I verify these privacy claims?">
+    Absolutely. The source code is open source and available at [github.com/Ephistopheles/atomix-qrgen](https://github.com/Ephistopheles/atomix-qrgen). You can:
+    - Review the code yourself
+    - Check your browser's Network tab (no requests after page load)
+    - Inspect localStorage/cookies (nothing stored)
+    - Build and host it yourself
+  </Accordion>
+
+  <Accordion title="What about the hosting provider?">
+    If using a hosted version, the hosting provider may have basic server logs (IP address, user agent, timestamp) from the initial page load. For zero logging, self-host the application or run it locally.
+  </Accordion>
+
+  <Accordion title="Are there any external dependencies loaded at runtime?">
+    No. All dependencies are bundled during the build process. There are no external CDNs, fonts, or scripts loaded from third-party servers.
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices for Privacy
+
+<Steps>
+  <Step title="Use HTTPS">
+    Always access Atomix QRGen over HTTPS to prevent man-in-the-middle attacks during the initial page load.
+  </Step>
+
+  <Step title="Verify the Domain">
+    Make sure you're on the official domain or your own self-hosted instance. Check the URL carefully.
+  </Step>
+
+  <Step title="Self-Host for Sensitive Data">
+    For highly sensitive data, consider self-hosting on your own infrastructure or running locally.
+  </Step>
+
+  <Step title="Check Browser Extensions">
+    Some browser extensions may capture form data. Use a clean browser profile for maximum privacy.
+  </Step>
+
+  <Step title="Clear Downloads">
+    Remember to securely delete downloaded QR codes if they contain sensitive information you no longer need.
+  </Step>
+</Steps>
+
+## Related Resources
+
+- [Downloading QR Codes](/guides/downloading)
+- [Customizing QR Codes](/guides/customization)
+- [GitHub Repository](https://github.com/Ephistopheles/atomix-qrgen)

@@ -1,0 +1,308 @@
+---
+title: Downloading QR Codes
+description: Learn how to download and print your generated QR codes in different formats
+---
+
+## Download Formats
+
+Atomix QRGen supports downloading QR codes in two popular formats:
+
+<CardGroup cols={2}>
+  <Card title="PNG" icon="image">
+    Raster image format, perfect for web use and printing at fixed sizes
+  </Card>
+  <Card title="SVG" icon="vector-square">
+    Vector format that scales infinitely without quality loss
+  </Card>
+</CardGroup>
+
+### Selecting a Format
+
+Choose your preferred export format using the format selector buttons in the preview card:
+
+```tsx
+<div class="flex gap-3">
+  {["png", "svg"].map((fmt) => (
+    <button
+      onClick={() => setFormat(fmt as ExportFormat)}
+      class={`flex-1 py-2 text-xs font-semibold rounded-lg transition uppercase ${
+        format === fmt
+          ? "bg-blue-600 text-white shadow-sm"
+          : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+      }`}
+    >
+      {fmt}
+    </button>
+  ))}
+</div>
+```
+
+**Reference:** `src/components/qr-code-app/cards/qr-preview/card-qr-preview.tsx:243-257`
+
+<Note>
+The format selection is displayed before the QR preview, making it easy to switch between PNG and SVG before downloading.
+</Note>
+
+## Downloading Your QR Code
+
+<Steps>
+  <Step title="Select QR Type">
+    Choose the type of QR code you want to generate (URL, WiFi, vCard, etc.) from the type selector.
+  </Step>
+
+  <Step title="Fill in the Form">
+    Complete all required fields marked with an asterisk (*). The download button will remain disabled until all required fields are valid.
+  </Step>
+
+  <Step title="Choose Format">
+    Select either PNG or SVG format using the format selector buttons above the preview.
+  </Step>
+
+  <Step title="Click Download">
+    Click the "Descargar QR" button. The QR code will be automatically downloaded to your default downloads folder.
+  </Step>
+</Steps>
+
+### Download Implementation
+
+The download functionality is handled client-side using the `qr-code-styling` library:
+
+```typescript
+const handleDownload = async () => {
+  if (!qr.current || isDisabled) {
+    if (!validation.isValid) {
+      showToast({
+        message: "Por favor, completa todos los campos obligatorios antes de descargar",
+        type: "warning",
+      });
+    }
+    return;
+  }
+
+  try {
+    const typeKey = type
+      ? Object.keys(QrTypeKey).find(
+          (key) => QrTypeKey[key as keyof typeof QrTypeKey] === type,
+        )
+      : "Unknown";
+    const fileName = `Qr_${typeKey}_${new Date().toISOString().replace(/[-:]/g, "").replace("T", "_").split(".")[0]}`;
+
+    await qr.current.download({
+      name: fileName,
+      extension: format,
+    } as any);
+    showToast({
+      message: `QR descargado como ${format.toUpperCase()}`,
+      type: "success",
+    });
+  } catch (error) {
+    console.error("Error al descargar QR:", error);
+    showToast({
+      message: "Error al descargar QR. Intenta de nuevo.",
+      type: "error",
+    });
+  }
+};
+```
+
+**Reference:** `src/components/qr-code-app/cards/qr-preview/card-qr-preview.tsx:78-113`
+
+### File Naming Convention
+
+Downloaded files follow this naming pattern:
+
+```
+Qr_[TYPE]_[TIMESTAMP]
+```
+
+For example:
+- `Qr_Url_20260303_143022.png`
+- `Qr_Wifi_20260303_143145.svg`
+- `Qr_VCard_20260303_143301.png`
+
+<Tip>
+The timestamp format (YYYYMMDD_HHMMSS) ensures files are automatically sorted chronologically and prevents filename collisions.
+</Tip>
+
+## Printing QR Codes
+
+In addition to downloading, Atomix QRGen includes a built-in print function:
+
+### How to Print
+
+<Steps>
+  <Step title="Generate Your QR Code">
+    Complete the form and ensure your QR code is displayed in the preview.
+  </Step>
+
+  <Step title="Click Print Button">
+    Click the "Imprimir" button below the download button.
+  </Step>
+
+  <Step title="Allow Pop-ups">
+    If prompted, allow pop-ups for the site. The print function opens a new window with your QR code.
+  </Step>
+
+  <Step title="Print">
+    The browser's print dialog will open automatically. Choose your printer and settings, then print.
+  </Step>
+</Steps>
+
+### Print Window Features
+
+The print function creates a clean, print-optimized page:
+
+```typescript
+const html = `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${fileName}</title>
+      <style>
+        body { 
+          margin: 0; 
+          padding: 20px; 
+          display: flex; 
+          justify-content: center; 
+          align-items: center; 
+          min-height: 100vh; 
+          font-family: system-ui, -apple-system, sans-serif; 
+          background: white;
+        }
+        img { 
+          max-width: 600px; 
+          width: 100%; 
+          height: auto; 
+        }
+        @media print {
+          body { padding: 0; margin: 0; }
+        }
+      </style>
+    </head>
+    <body onload="autoPrint()">
+      <div id="qr-container">
+        <img src="${dataUrl}" alt="QR Code" />
+      </div>
+    </body>
+  </html>
+`;
+```
+
+**Reference:** `src/components/qr-code-app/cards/qr-preview/card-qr-preview.tsx:158-219`
+
+<Note>
+The print window automatically scales the QR code up to 600px for better print quality while maintaining aspect ratio.
+</Note>
+
+### Print Workflow
+
+1. **Canvas Extraction**: Converts the QR canvas to a data URL
+2. **New Window**: Opens a print-optimized window
+3. **Auto-Print**: Triggers the print dialog automatically
+4. **Auto-Close**: Closes the window after printing completes
+
+<Warning>
+If you have a pop-up blocker enabled, you'll need to allow pop-ups for Atomix QRGen to use the print function.
+</Warning>
+
+## QR Code Specifications
+
+All generated QR codes have the following specifications:
+
+<CardGroup cols={3}>
+  <Card title="Size" icon="ruler">
+    280x280 pixels
+  </Card>
+  <Card title="Error Correction" icon="shield">
+    Level M (15%)
+  </Card>
+  <Card title="Color Depth" icon="palette">
+    Black (#000) on White (#FFF)
+  </Card>
+</CardGroup>
+
+These specifications are displayed in the preview card when a valid QR code is generated:
+
+```tsx
+<div class="border-t border-gray-200 pt-4 space-y-2 text-sm">
+  <div class="flex justify-between">
+    <span class="text-gray-600">Tamaño</span>
+    <span class="font-medium text-gray-900">280x280 px</span>
+  </div>
+  <div class="flex justify-between">
+    <span class="text-gray-600">Corrección</span>
+    <span class="font-medium text-gray-900">Nivel M (15%)</span>
+  </div>
+  <div class="flex justify-between">
+    <span class="text-gray-600">Formato</span>
+    <span class="font-medium text-gray-900">{format.toUpperCase()}</span>
+  </div>
+</div>
+```
+
+**Reference:** `src/components/qr-code-app/cards/qr-preview/card-qr-preview.tsx:324-340`
+
+## Format Comparison
+
+| Feature | PNG | SVG |
+|---------|-----|-----|
+| **File Size** | Larger (fixed resolution) | Smaller (vector data) |
+| **Scalability** | Pixelated when enlarged | Infinite scaling |
+| **Compatibility** | Universal | May require vector support |
+| **Best For** | Web, social media, email | Print, large displays, editing |
+| **Print Quality** | Good at native size | Excellent at any size |
+
+<Tip>
+**When to use PNG:**
+- Quick sharing on social media
+- Embedding in presentations
+- Email signatures at fixed size
+
+**When to use SVG:**
+- Professional printing
+- Large format displays
+- When you need to edit in design software
+- Responsive web designs
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Download button is disabled">
+    The download button will be disabled if:
+    - No QR type is selected
+    - Required form fields are incomplete
+    - Form validation errors exist
+
+    Make sure all fields marked with (*) are filled in correctly.
+  </Accordion>
+
+  <Accordion title="Print window doesn't open">
+    If the print window doesn't open:
+    1. Check if pop-ups are blocked in your browser
+    2. Add Atomix QRGen to your pop-up whitelist
+    3. Try using the download function instead
+  </Accordion>
+
+  <Accordion title="QR code is blurry when printed">
+    For best print quality:
+    - Use SVG format for vector-perfect printing
+    - Ensure your printer settings are set to high quality
+    - Avoid scaling PNG files beyond 280x280 pixels
+  </Accordion>
+
+  <Accordion title="File downloads with wrong name">
+    The filename is automatically generated based on:
+    - QR code type (URL, WiFi, vCard, etc.)
+    - Current timestamp
+    
+    You can rename the file after downloading if needed.
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+- [Customizing QR Codes](/guides/customization)
+- [Privacy & Security](/guides/privacy-security)
+- [QR Code Types](/qr-types/url)

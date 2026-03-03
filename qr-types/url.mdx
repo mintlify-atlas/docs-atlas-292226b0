@@ -1,0 +1,118 @@
+---
+title: 'URL QR Codes'
+description: 'Generate QR codes that direct users to websites and web pages'
+icon: 'link'
+---
+
+## Overview
+
+URL QR codes encode web addresses that users can quickly access by scanning. When scanned, the device automatically opens the URL in the default browser. This is one of the most common QR code types, ideal for marketing materials, business cards, and product packaging.
+
+## Data Structure
+
+URL QR codes use the `UrlQrData` interface:
+
+```typescript
+export interface UrlQrData {
+  url: string;
+}
+```
+
+<ParamField path="url" type="string" required>
+  The web address to encode. Can be provided with or without the protocol (http:// or https://). If no protocol is specified, https:// will be automatically prepended.
+</ParamField>
+
+## Encoding Format
+
+The URL encoder (from `/src/domain/encoders/encoders.ts:15-23`) performs the following transformations:
+
+1. Trims whitespace from the URL
+2. Automatically prepends `https://` if the URL doesn't start with `http://` or `https://`
+3. Returns the normalized URL string
+
+```typescript
+const encodeUrl = (data: UrlQrData) => {
+  let url = data.url.trim();
+
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    url = "https://" + url;
+  }
+
+  return url;
+};
+```
+
+### Example Encoding
+
+| Input | Encoded Output |
+|-------|----------------|
+| `example.com` | `https://example.com` |
+| `http://example.com` | `http://example.com` |
+| `https://example.com/page` | `https://example.com/page` |
+
+## Validation Rules
+
+The validator (from `/src/domain/validation/validators.ts:56-69`) enforces these requirements:
+
+<AccordionGroup>
+  <Accordion title="Required Field">
+    - The `url` field cannot be empty or contain only whitespace
+    - Error message: "La URL es obligatoria"
+  </Accordion>
+
+  <Accordion title="Valid URL Format">
+    - Must be a valid URL format
+    - The validator automatically adds `https://` protocol if missing before validation
+    - Must pass JavaScript's `URL()` constructor validation
+    - Error message: "La URL no es válida. Ej: https://ejemplo.com o ejemplo.com"
+  </Accordion>
+</AccordionGroup>
+
+### Validation Example
+
+```typescript
+const isValidUrl = (url: string): boolean => {
+  try {
+    const urlStr = url.trim();
+    const withProtocol = urlStr.startsWith("http://") || urlStr.startsWith("https://") 
+      ? urlStr 
+      : `https://${urlStr}`;
+    new URL(withProtocol);
+    return true;
+  } catch {
+    return false;
+  }
+};
+```
+
+## Usage Example
+
+```typescript
+import { QrTypeKey } from "./domain/types/qr";
+import type { UrlQrData } from "./domain/types/qr";
+import { encodeQrData } from "./domain/encoders/encoders";
+import { validateUrlQr } from "./domain/validation/validators";
+
+// Create URL QR data
+const urlData: UrlQrData = {
+  url: "example.com"
+};
+
+// Validate the data
+const validation = validateUrlQr(urlData);
+if (!validation.isValid) {
+  console.error("Validation errors:", validation.errors);
+}
+
+// Encode the data
+const encodedUrl = encodeQrData(QrTypeKey.Url, urlData);
+// Result: "https://example.com"
+```
+
+## Common Use Cases
+
+- **Marketing**: Link to product pages, landing pages, or promotional content
+- **Business Cards**: Direct to company website or personal portfolio
+- **Print Media**: Connect physical materials to digital content
+- **Event Materials**: Link to event registration or information pages
+- **Product Packaging**: Connect to product manuals, warranty info, or support pages

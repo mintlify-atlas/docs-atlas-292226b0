@@ -1,0 +1,287 @@
+---
+title: 'Types'
+description: 'TypeScript type definitions and interfaces for QR code data structures'
+---
+
+## Overview
+
+Atomix QRGen provides comprehensive TypeScript types for all supported QR code formats. These types ensure type safety when working with QR data throughout the application.
+
+## QrTypeKey
+
+Enum defining the supported QR code types.
+
+```typescript
+enum QrTypeKey {
+  PlainText = "PT",
+  Url = "UL",
+  Wifi = "WF",
+  VCard = "VC",
+  Payment = "PB",
+  Event = "EV",
+}
+```
+
+### Values
+
+<ParamField path="PlainText" type="string" default="PT">
+  Plain text QR code type identifier
+</ParamField>
+
+<ParamField path="Url" type="string" default="UL">
+  URL QR code type identifier
+</ParamField>
+
+<ParamField path="Wifi" type="string" default="WF">
+  WiFi network QR code type identifier
+</ParamField>
+
+<ParamField path="VCard" type="string" default="VC">
+  vCard contact QR code type identifier
+</ParamField>
+
+<ParamField path="Payment" type="string" default="PB">
+  Payment QR code type identifier
+</ParamField>
+
+<ParamField path="Event" type="string" default="EV">
+  Calendar event QR code type identifier
+</ParamField>
+
+## Data Interfaces
+
+### TextQrData
+
+Interface for plain text QR codes.
+
+```typescript
+interface TextQrData {
+  text: string;
+}
+```
+
+<ParamField path="text" type="string" required>
+  The text content to encode in the QR code
+</ParamField>
+
+### UrlQrData
+
+Interface for URL QR codes.
+
+```typescript
+interface UrlQrData {
+  url: string;
+}
+```
+
+<ParamField path="url" type="string" required>
+  The URL to encode. Protocol prefix (http:// or https://) is optional and will be added automatically
+</ParamField>
+
+### WifiQrData
+
+Interface for WiFi network QR codes.
+
+```typescript
+interface WifiQrData {
+  ssid: string;
+  password: string;
+  security: "WPA" | "WEP" | "nopass";
+}
+```
+
+<ParamField path="ssid" type="string" required>
+  Network SSID (name). Maximum 32 characters
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  Network password. Required for WPA and WEP security types
+</ParamField>
+
+<ParamField path="security" type="'WPA' | 'WEP' | 'nopass'" required>
+  Network security type. Use "nopass" for open networks
+</ParamField>
+
+### VCardQrData
+
+Interface for vCard contact QR codes.
+
+```typescript
+interface VCardQrData {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  mobile: string;
+  email: string;
+  organization: string;
+  title: string;
+  website: string;
+  address: string;
+  note: string;
+}
+```
+
+<ParamField path="firstName" type="string" required>
+  Contact's first name
+</ParamField>
+
+<ParamField path="lastName" type="string" required>
+  Contact's last name
+</ParamField>
+
+<ParamField path="phone" type="string">
+  Landline phone number
+</ParamField>
+
+<ParamField path="mobile" type="string">
+  Mobile phone number
+</ParamField>
+
+<ParamField path="email" type="string">
+  Email address
+</ParamField>
+
+<ParamField path="organization" type="string">
+  Organization or company name
+</ParamField>
+
+<ParamField path="title" type="string">
+  Job title or position
+</ParamField>
+
+<ParamField path="website" type="string">
+  Website URL
+</ParamField>
+
+<ParamField path="address" type="string">
+  Physical address
+</ParamField>
+
+<ParamField path="note" type="string">
+  Additional notes
+</ParamField>
+
+### PaymentQrData
+
+Interface for payment QR codes.
+
+```typescript
+interface PaymentQrData {
+  method: string;
+  name: string;
+  account: string;
+  bank: string;
+  amount: number;
+  reference: string;
+}
+```
+
+<ParamField path="method" type="string" required>
+  Payment method. Use "crypto" for cryptocurrency payments
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Recipient's name
+</ParamField>
+
+<ParamField path="account" type="string" required>
+  Account number or cryptocurrency address
+</ParamField>
+
+<ParamField path="bank" type="string" required>
+  Bank name or payment platform
+</ParamField>
+
+<ParamField path="amount" type="number" required>
+  Payment amount. Must be greater than 0
+</ParamField>
+
+<ParamField path="reference" type="string">
+  Payment reference or memo
+</ParamField>
+
+### EventQrData
+
+Interface for calendar event QR codes.
+
+```typescript
+interface EventQrData {
+  title: string;
+  description: string;
+  location: string;
+  start: string;
+  end: string;
+}
+```
+
+<ParamField path="title" type="string" required>
+  Event title
+</ParamField>
+
+<ParamField path="description" type="string">
+  Event description
+</ParamField>
+
+<ParamField path="location" type="string" required>
+  Event location
+</ParamField>
+
+<ParamField path="start" type="string" required>
+  Event start date and time (ISO format)
+</ParamField>
+
+<ParamField path="end" type="string" required>
+  Event end date and time (ISO format). Must be after start time
+</ParamField>
+
+## Union Types
+
+### QrDataUnion
+
+Union type of all QR data interfaces.
+
+```typescript
+type QrDataUnion =
+  | TextQrData
+  | UrlQrData
+  | WifiQrData
+  | VCardQrData
+  | PaymentQrData
+  | EventQrData;
+```
+
+### QrTypeDataMap
+
+Mapped type connecting QR type keys to their corresponding data interfaces.
+
+```typescript
+type QrTypeDataMap = {
+  [QrTypeKey.PlainText]: TextQrData;
+  [QrTypeKey.Url]: UrlQrData;
+  [QrTypeKey.Wifi]: WifiQrData;
+  [QrTypeKey.VCard]: VCardQrData;
+  [QrTypeKey.Payment]: PaymentQrData;
+  [QrTypeKey.Event]: EventQrData;
+};
+```
+
+This type ensures type safety when working with QR data based on the selected QR type key.
+
+## Usage Example
+
+```typescript
+import { QrTypeKey, type WifiQrData, type QrDataUnion } from './types/qr';
+
+// Strongly typed WiFi QR data
+const wifiData: WifiQrData = {
+  ssid: "MyNetwork",
+  password: "securepassword123",
+  security: "WPA"
+};
+
+// Using the union type
+const qrData: QrDataUnion = wifiData;
+
+// Type-safe key usage
+const qrType = QrTypeKey.Wifi; // "WF"
+```

@@ -1,80 +1,145 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Generate your first QR code in seconds with Atomix QRGen
 ---
 
-## Get started in three steps
+Atomix QRGen is a web application that runs entirely in your browser. No installation needed - just visit the app and start generating QR codes instantly.
 
-Get your documentation site running locally and make your first customization.
+<Note>
+All QR code generation happens **client-side** in your browser. Your data never leaves your device, ensuring complete privacy.
+</Note>
 
-### Step 1: Set up your local environment
+## Generate your first QR code
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Steps>
+  <Step title="Choose a QR code type">
+    When you open Atomix QRGen, you'll see six QR code type options:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    - **URL** - Link to a website
+    - **Text** - Plain text content
+    - **WiFi** - Network credentials
+    - **vCard** - Contact information
+    - **Event** - Calendar events
+    - **Payment** - Payment requests
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    Click on any type to get started. For this example, we'll create a **URL** QR code.
+  </Step>
 
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+  <Step title="Enter your data">
+    After selecting **URL**, a form will appear asking for the website URL.
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    Enter any URL (e.g., `https://github.com/Ephistopheles/atomix-qrgen`). The app automatically adds `https://` if you omit it.
+    
+    <Info>
+    The form validates your input in real-time. If there's an error, you'll see a message explaining what needs to be fixed.
+    </Info>
+  </Step>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+  <Step title="View your QR code">
+    As soon as you enter valid data, the QR code appears instantly in the preview panel on the right.
+    
+    The QR code is generated immediately using the `qr-code-styling` library - no server roundtrip required!
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Download or print">
+    Once you're happy with your QR code, you have two options:
+    
+    - **Download as PNG** - Click the download button to save a 280x280px PNG image
+    - **Download as SVG** - Get a scalable vector version for print or large displays
+    - **Print** - Click the printer icon to print directly
+    
+    Files are named with a timestamp (e.g., `qr-code-1709500000000.png`) to avoid overwriting previous downloads.
+  </Step>
+</Steps>
 
-### Step 3: Go live
+## How it works
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+Under the hood, Atomix QRGen uses a simple data flow:
+
+```tsx
+// src/components/qr-code-app/app/qr-gen-app.tsx
+export default function QrGenApp() {
+  const [type, setType] = useState<QrTypeKey | null>(null);
+  const [data, setData] = useState<QrDataUnion | null>(null);
+
+  return (
+    <>
+      <CardQrType selected={type} onSelect={setType} />
+      <CardContentInput selectedType={type} onChange={setData} />
+      <CardQrPreview type={type} data={data} />
+    </>
+  );
+}
+```
+
+When you select a type and enter data:
+
+1. **Type selection** triggers `setType()`, updating the selected QR type
+2. **Form input** triggers `onChange()`, passing validated data to `setData()`
+3. **QR preview** receives the type and data, then:
+   - Encodes the data using format-specific encoders (e.g., `WIFI:T:WPA;S:MyNetwork;P:password;;`)
+   - Generates the QR code using `QRCodeStyling`
+   - Renders the result on a canvas element
+
+All of this happens instantly in your browser with zero network requests.
+
+## More examples
+
+### WiFi QR code
+
+Create a QR code for your WiFi network:
+
+1. Select **WiFi** type
+2. Enter your network name (SSID): `MyHomeWiFi`
+3. Choose security type: `WPA`
+4. Enter password: `secretpassword123`
+5. The QR code encodes: `WIFI:T:WPA;S:MyHomeWiFi;P:secretpassword123;;`
+
+Anyone scanning this QR code can connect to your WiFi instantly (on supported devices).
+
+### vCard QR code
+
+Share your contact information:
+
+1. Select **vCard** type
+2. Enter your first and last name (required)
+3. Optionally add: phone, email, organization, website, address
+4. The QR code generates a vCard 3.0 format:
+
+```plaintext
+BEGIN:VCARD
+VERSION:3.0
+FN:Johan Amed
+N:Amed;Johan;;;
+TEL;TYPE=CELL:+1234567890
+EMAIL:rjohanamed@gmail.com
+URL:https://github.com/Ephistopheles
+END:VCARD
+```
+
+<Tip>
+For maximum compatibility, keep vCard data concise. Long addresses or notes can make QR codes harder to scan.
+</Tip>
+
+## Privacy guarantee
+
+Atomix QRGen's client-side architecture means:
+
+- ✅ No data sent to servers
+- ✅ No analytics or tracking
+- ✅ No cookies or local storage of sensitive data
+- ✅ Works offline after initial page load
+- ✅ Open source - verify the code yourself
+
+Read more about [Privacy & Security](/guides/privacy-security).
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Installation" icon="code" href="/installation">
+    Want to run Atomix QRGen locally or contribute? Follow the installation guide
+  </Card>
+  <Card title="QR types" icon="shapes" href="/qr-types/url">
+    Learn about all supported QR formats and their data structures
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

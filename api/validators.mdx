@@ -1,0 +1,370 @@
+---
+title: 'Validators'
+description: 'Validation functions for QR code data with comprehensive error handling'
+---
+
+## Overview
+
+The validator module provides comprehensive validation for all QR data types. Each validator returns a `ValidationResult` object containing validation status and detailed error messages.
+
+## ValidationResult Interface
+
+```typescript
+interface ValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+```
+
+<ResponseField name="isValid" type="boolean">
+  `true` if all validations pass, `false` if any validation fails
+</ResponseField>
+
+<ResponseField name="errors" type="Record<string, string>">
+  Object mapping field names to error messages. Empty object when `isValid` is `true`
+</ResponseField>
+
+## Main Validator
+
+### validateQrData
+
+Main validation function that routes to the appropriate validator based on QR type.
+
+```typescript
+function validateQrData(
+  type: QrTypeKey,
+  data:
+    | TextQrData
+    | UrlQrData
+    | WifiQrData
+    | VCardQrData
+    | PaymentQrData
+    | EventQrData
+    | null,
+): ValidationResult
+```
+
+<ParamField path="type" type="QrTypeKey" required>
+  The QR code type identifier
+</ParamField>
+
+<ParamField path="data" type="QrDataUnion | null" required>
+  The data object to validate. Returns invalid if `null`
+</ParamField>
+
+<ResponseField name="return" type="ValidationResult">
+  Validation result with `isValid` flag and any error messages
+</ResponseField>
+
+#### Example
+
+```typescript
+import { validateQrData, QrTypeKey } from './validators';
+
+const result = validateQrData(QrTypeKey.Url, { url: "invalid url" });
+if (!result.isValid) {
+  console.log(result.errors.url); // "La URL no es válida..."
+}
+```
+
+## Type-Specific Validators
+
+### validateTextQr
+
+Validates plain text QR data.
+
+```typescript
+function validateTextQr(data: TextQrData): ValidationResult
+```
+
+<ParamField path="data" type="TextQrData" required>
+  Text data to validate
+</ParamField>
+
+#### Validation Rules
+
+- **text**: Required, non-empty after trimming
+- **text**: Minimum 1 character
+- **text**: Maximum 2953 characters
+
+#### Example
+
+```typescript
+const result = validateTextQr({ text: "" });
+// Returns: { isValid: false, errors: { text: "El texto es obligatorio" } }
+
+const valid = validateTextQr({ text: "Hello World" });
+// Returns: { isValid: true, errors: {} }
+```
+
+### validateUrlQr
+
+Validates URL QR data.
+
+```typescript
+function validateUrlQr(data: UrlQrData): ValidationResult
+```
+
+<ParamField path="data" type="UrlQrData" required>
+  URL data to validate
+</ParamField>
+
+#### Validation Rules
+
+- **url**: Required, non-empty after trimming
+- **url**: Must be a valid URL format (checked with URL constructor)
+- **url**: Protocol (http:// or https://) is optional for validation
+
+#### Example
+
+```typescript
+const result = validateUrlQr({ url: "not a url" });
+// Returns: { isValid: false, errors: { url: "La URL no es válida..." } }
+
+const valid = validateUrlQr({ url: "example.com" });
+// Returns: { isValid: true, errors: {} }
+```
+
+### validateWifiQr
+
+Validates WiFi network QR data.
+
+```typescript
+function validateWifiQr(data: WifiQrData): ValidationResult
+```
+
+<ParamField path="data" type="WifiQrData" required>
+  WiFi data to validate
+</ParamField>
+
+#### Validation Rules
+
+- **ssid**: Required, non-empty after trimming
+- **ssid**: Maximum 32 characters
+- **password**: Required if security is not `"nopass"`
+- **password**: Minimum 5 characters for WEP
+- **password**: Minimum 8 characters for WPA
+- **password**: Maximum 63 characters
+
+#### Example
+
+```typescript
+const result = validateWifiQr({
+  ssid: "MyNetwork",
+  password: "123",
+  security: "WPA"
+});
+// Returns: { 
+//   isValid: false, 
+//   errors: { password: "La contraseña WPA/WPA2 debe tener al menos 8 caracteres" }
+// }
+
+const valid = validateWifiQr({
+  ssid: "MyNetwork",
+  password: "securepass123",
+  security: "WPA"
+});
+// Returns: { isValid: true, errors: {} }
+```
+
+### validateVCardQr
+
+Validates vCard contact QR data.
+
+```typescript
+function validateVCardQr(data: VCardQrData): ValidationResult
+```
+
+<ParamField path="data" type="VCardQrData" required>
+  vCard data to validate
+</ParamField>
+
+#### Validation Rules
+
+- **firstName**: Required, non-empty after trimming
+- **lastName**: Required, non-empty after trimming
+- **phone**: Optional, but must match phone format if provided (7+ chars, digits/spaces/+/-/())
+- **mobile**: Optional, but must match phone format if provided
+- **email**: Optional, but must match email format if provided (basic regex: `[^\ s@]+@[^\ s@]+\.[^\ s@]+`)
+- **website**: Optional, but must be valid URL if provided
+
+#### Example
+
+```typescript
+const result = validateVCardQr({
+  firstName: "John",
+  lastName: "",
+  phone: "invalid",
+  mobile: "",
+  email: "not-an-email",
+  organization: "",
+  title: "",
+  website: "",
+  address: "",
+  note: ""
+});
+// Returns: { 
+//   isValid: false, 
+//   errors: { 
+//     lastName: "El apellido es obligatorio",
+//     phone: "Número de teléfono inválido",
+//     email: "Email inválido"
+//   }
+// }
+```
+
+### validatePaymentQr
+
+Validates payment QR data.
+
+```typescript
+function validatePaymentQr(data: PaymentQrData): ValidationResult
+```
+
+<ParamField path="data" type="PaymentQrData" required>
+  Payment data to validate
+</ParamField>
+
+#### Validation Rules
+
+- **method**: Required, non-empty after trimming
+- **name**: Required, non-empty after trimming
+- **account**: Required, non-empty after trimming
+- **account**: If method is `"crypto"`, minimum 26 characters
+- **account**: If method is not crypto, must contain only digits, hyphens, and spaces
+- **bank**: Required, non-empty after trimming
+- **amount**: Must be greater than 0
+- **amount**: Must be a valid number (not NaN)
+
+#### Example
+
+```typescript
+const result = validatePaymentQr({
+  method: "crypto",
+  name: "John Doe",
+  account: "short",
+  bank: "Bitcoin",
+  amount: -10,
+  reference: ""
+});
+// Returns: { 
+//   isValid: false, 
+//   errors: { 
+//     account: "Dirección de criptomoneda inválida (muy corta)",
+//     amount: "El monto debe ser mayor a 0"
+//   }
+// }
+```
+
+### validateEventQr
+
+Validates calendar event QR data.
+
+```typescript
+function validateEventQr(data: EventQrData): ValidationResult
+```
+
+<ParamField path="data" type="EventQrData" required>
+  Event data to validate
+</ParamField>
+
+#### Validation Rules
+
+- **title**: Required, non-empty after trimming
+- **location**: Required, non-empty after trimming
+- **start**: Required, non-empty after trimming
+- **start**: Must be a valid date string
+- **end**: Required, non-empty after trimming
+- **end**: Must be a valid date string
+- **end**: Must be after start time
+
+#### Example
+
+```typescript
+const result = validateEventQr({
+  title: "Meeting",
+  description: "",
+  location: "Office",
+  start: "2024-03-15 14:00:00",
+  end: "2024-03-15 13:00:00"
+});
+// Returns: { 
+//   isValid: false, 
+//   errors: { end: "La fecha de fin debe ser posterior a la de inicio" }
+// }
+
+const valid = validateEventQr({
+  title: "Meeting",
+  description: "Team sync",
+  location: "Office",
+  start: "2024-03-15 14:00:00",
+  end: "2024-03-15 15:00:00"
+});
+// Returns: { isValid: true, errors: {} }
+```
+
+## Helper Functions
+
+### isValidUrl
+
+Internal helper to validate URL format.
+
+```typescript
+function isValidUrl(url: string): boolean
+```
+
+Automatically adds `https://` if no protocol is present before validation.
+
+### isValidEmail
+
+Internal helper to validate email format.
+
+```typescript
+function isValidEmail(email: string): boolean
+```
+
+Uses regex: `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`
+
+### isValidPhone
+
+Internal helper to validate phone number format.
+
+```typescript
+function isValidPhone(phone: string): boolean
+```
+
+Requirements:
+- Minimum 7 characters
+- Contains only digits, spaces, hyphens, plus signs, and parentheses
+- Uses regex: `/^[\d\s\-\+\(\)]+$/`
+
+## Error Messages
+
+All error messages are in Spanish. Common messages include:
+
+- `"El {campo} es obligatorio"` - Required field is empty
+- `"{Campo} inválido"` - Invalid format
+- `"La contraseña WPA/WPA2 debe tener al menos 8 caracteres"` - WPA password too short
+- `"El monto debe ser mayor a 0"` - Amount must be positive
+- `"La fecha de fin debe ser posterior a la de inicio"` - End date before start date
+
+## Usage Pattern
+
+```typescript
+import { validateQrData, QrTypeKey } from './validators';
+
+function handleFormSubmit(type: QrTypeKey, data: any) {
+  const validation = validateQrData(type, data);
+  
+  if (!validation.isValid) {
+    // Display errors to user
+    Object.entries(validation.errors).forEach(([field, message]) => {
+      console.error(`${field}: ${message}`);
+    });
+    return;
+  }
+  
+  // Proceed with valid data
+  generateQrCode(type, data);
+}
+```

@@ -1,0 +1,322 @@
+---
+title: Contributing
+description: How to contribute to Atomix QRGen
+---
+
+## Welcome Contributors!
+
+Thank you for your interest in contributing to Atomix QRGen! This guide will help you get started.
+
+## Getting Started
+
+### Prerequisites
+
+Before you begin, ensure you have:
+
+- **Node.js** 18 or higher
+- **npm** (or any compatible Node package manager)
+- **Git** for version control
+- A code editor (VS Code recommended)
+
+### Fork and Clone
+
+1. Fork the repository on GitHub:
+   - Visit [https://github.com/Ephistopheles/atomix-qrgen](https://github.com/Ephistopheles/atomix-qrgen)
+   - Click the "Fork" button in the top right
+
+2. Clone your fork locally:
+
+```bash
+git clone https://github.com/YOUR-USERNAME/atomix-qrgen.git
+cd atomix-qrgen
+```
+
+3. Add the upstream repository:
+
+```bash
+git remote add upstream https://github.com/Ephistopheles/atomix-qrgen.git
+```
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+### Run the Development Server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:4321](http://localhost:4321) to view the app.
+
+## Development Workflow
+
+### 1. Create a Branch
+
+Always create a new branch for your work:
+
+```bash
+git checkout -b feature/your-feature-name
+```
+
+Branch naming conventions:
+- `feature/` - New features
+- `fix/` - Bug fixes
+- `docs/` - Documentation updates
+- `refactor/` - Code refactoring
+- `style/` - Code style changes
+- `test/` - Adding or updating tests
+
+Examples:
+- `feature/add-sms-qr-type`
+- `fix/wifi-password-validation`
+- `docs/update-readme`
+
+### 2. Make Your Changes
+
+Follow the project's coding standards:
+
+#### TypeScript
+- Use TypeScript for all new code
+- Define interfaces for component props
+- Use proper type annotations
+- Avoid `any` type when possible
+
+#### Component Structure
+- Follow the existing component hierarchy
+- Use functional components with hooks
+- Keep components focused and single-purpose
+- Place components in appropriate directories
+
+#### Styling
+- Use Tailwind CSS utility classes
+- Follow the existing color scheme
+- Ensure responsive design (mobile-first)
+- Test on multiple screen sizes
+
+#### Validation
+- Add validators for new QR types in `src/domain/validation/validators.ts`
+- Include error messages in Spanish (current language)
+- Test edge cases and validation rules
+
+#### Encoding
+- Add encoders for new QR types in `src/domain/encoders/encoders.ts`
+- Follow standard QR code format specifications
+- Test encoded output with QR code readers
+
+### 3. Test Your Changes
+
+Before submitting:
+
+1. **Manual Testing**
+   - Test all affected functionality
+   - Verify on different browsers (Chrome, Firefox, Safari)
+   - Test on mobile devices
+   - Scan generated QR codes with real devices
+
+2. **Build Test**
+   ```bash
+   npm run build
+   npm run preview
+   ```
+   - Ensure the production build works
+   - Check for build errors or warnings
+
+3. **Code Quality**
+   - Ensure TypeScript compiles without errors
+   - Remove console.log statements
+   - Check for unused imports
+
+### 4. Commit Your Changes
+
+Write clear, descriptive commit messages:
+
+```bash
+git add .
+git commit -m "Add SMS QR code type with validation"
+```
+
+**Commit Message Guidelines:**
+- Use present tense ("Add feature" not "Added feature")
+- Start with a verb (Add, Fix, Update, Refactor, etc.)
+- Keep first line under 72 characters
+- Add detailed description if needed
+
+Examples:
+```
+Add SMS QR code type with phone number validation
+
+Fix WiFi form password validation for WEP networks
+
+Update README with new QR type documentation
+
+Refactor form registry to support dynamic imports
+```
+
+### 5. Push to Your Fork
+
+```bash
+git push origin feature/your-feature-name
+```
+
+### 6. Create a Pull Request
+
+1. Go to your fork on GitHub
+2. Click "Compare & pull request"
+3. Fill out the PR template:
+   - **Title**: Clear, descriptive summary
+   - **Description**: What changes you made and why
+   - **Testing**: How you tested the changes
+   - **Screenshots**: If UI changes, include before/after images
+
+## Contribution Ideas
+
+### New QR Code Types
+
+Add support for additional QR code formats:
+- **SMS** - Send text messages
+- **Email** - Compose emails
+- **Phone** - Make phone calls
+- **Location** - GPS coordinates
+- **Social Media** - Profile links
+- **App Store** - App download links
+
+**Steps to add a new QR type:**
+
+1. Define type in `src/domain/types/qr.ts`:
+   ```typescript
+   export enum QrTypeKey {
+     // ...
+     Sms = "SM",
+   }
+   
+   export interface SmsQrData {
+     phone: string;
+     message: string;
+   }
+   ```
+
+2. Create encoder in `src/domain/encoders/encoders.ts`:
+   ```typescript
+   const encodeSms = (data: SmsQrData) => {
+     return `SMSTO:${data.phone}:${data.message}`;
+   };
+   ```
+
+3. Add validator in `src/domain/validation/validators.ts`:
+   ```typescript
+   export const validateSmsQr = (data: SmsQrData): ValidationResult => {
+     // Validation logic
+   };
+   ```
+
+4. Create form component `src/components/forms/sms/sms-form.tsx`
+
+5. Register in `src/domain/form/form-registry.ts`:
+   ```typescript
+   export const formRegistry = {
+     // ...
+     [QrTypeKey.Sms]: SmsForm,
+   };
+   ```
+
+6. Add to QR type selector in `src/components/qr-code-app/cards/qr-types/card-qr-type.tsx`
+
+### UI Improvements
+
+- Dark mode support
+- Additional color themes
+- QR code customization (colors, logos)
+- Improved mobile UI
+- Accessibility improvements (ARIA labels, keyboard navigation)
+
+### Features
+
+- QR code history (in-memory only for privacy)
+- Batch QR code generation
+- Export QR codes in multiple formats (SVG, PDF)
+- QR code scanning (reverse functionality)
+- Internationalization (i18n) support
+
+### Bug Fixes
+
+Check the [GitHub Issues](https://github.com/Ephistopheles/atomix-qrgen/issues) for:
+- Reported bugs
+- Feature requests
+- Enhancement ideas
+
+## Code Review Process
+
+1. **Automated Checks**: Your PR must pass any automated checks
+2. **Code Review**: Maintainers will review your code
+3. **Feedback**: Address any requested changes
+4. **Approval**: Once approved, your PR will be merged
+
+### Review Criteria
+
+- Code quality and readability
+- Follows project conventions
+- Properly tested
+- No breaking changes (or properly documented)
+- Documentation updated if needed
+
+## Privacy & Security Guidelines
+
+**Critical:** This app is privacy-focused. All contributions must maintain this principle:
+
+- ✅ All processing must happen client-side
+- ✅ No data transmission to external servers
+- ✅ No analytics or tracking code
+- ✅ No cookies or localStorage for sensitive data
+- ❌ Do not add backend requirements
+- ❌ Do not add third-party tracking
+- ❌ Do not store user data persistently
+
+## Questions?
+
+If you have questions:
+
+1. Check existing documentation in the `/docs` folder
+2. Search [GitHub Issues](https://github.com/Ephistopheles/atomix-qrgen/issues)
+3. Create a new issue with the "question" label
+4. Contact the maintainer: [rjohanamed@gmail.com](mailto:rjohanamed@gmail.com)
+
+## Code of Conduct
+
+### Our Pledge
+
+We pledge to make participation in our project a harassment-free experience for everyone, regardless of:
+- Age, body size, disability, ethnicity
+- Gender identity and expression
+- Level of experience
+- Nationality, personal appearance, race, religion
+- Sexual identity and orientation
+
+### Our Standards
+
+**Positive behavior:**
+- Using welcoming and inclusive language
+- Being respectful of differing viewpoints
+- Gracefully accepting constructive criticism
+- Focusing on what is best for the community
+- Showing empathy towards others
+
+**Unacceptable behavior:**
+- Trolling, insulting/derogatory comments, personal attacks
+- Public or private harassment
+- Publishing others' private information without permission
+- Other conduct which could reasonably be considered inappropriate
+
+### Enforcement
+
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting [rjohanamed@gmail.com](mailto:rjohanamed@gmail.com).
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the [MIT License](https://github.com/Ephistopheles/atomix-qrgen/blob/main/LICENSE).
+
+## Thank You!
+
+Your contributions help make Atomix QRGen better for everyone. We appreciate your time and effort!

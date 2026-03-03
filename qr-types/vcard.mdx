@@ -1,0 +1,263 @@
+---
+title: 'vCard QR Codes'
+description: 'Generate QR codes containing contact information (vCard format)'
+icon: 'address-card'
+---
+
+## Overview
+
+vCard QR codes encode contact information in the standardized vCard 3.0 format. When scanned, most smartphones automatically recognize the vCard format and offer to save the contact to the device's address book. This makes it perfect for business cards, email signatures, and networking events.
+
+## Data Structure
+
+vCard QR codes use the `VCardQrData` interface:
+
+```typescript
+export interface VCardQrData {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  mobile: string;
+  email: string;
+  organization: string;
+  title: string;
+  website: string;
+  address: string;
+  note: string;
+}
+```
+
+<ParamField path="firstName" type="string" required>
+  Contact's first name. This is a required field.
+</ParamField>
+
+<ParamField path="lastName" type="string" required>
+  Contact's last name. This is a required field.
+</ParamField>
+
+<ParamField path="phone" type="string">
+  Primary phone number (landline/office). Must be at least 7 characters and contain only digits, spaces, dashes, plus signs, and parentheses.
+</ParamField>
+
+<ParamField path="mobile" type="string">
+  Mobile/cell phone number. Must be at least 7 characters and contain only digits, spaces, dashes, plus signs, and parentheses.
+</ParamField>
+
+<ParamField path="email" type="string">
+  Email address. Must be a valid email format (e.g., user@example.com).
+</ParamField>
+
+<ParamField path="organization" type="string">
+  Company or organization name.
+</ParamField>
+
+<ParamField path="title" type="string">
+  Job title or position.
+</ParamField>
+
+<ParamField path="website" type="string">
+  Personal or company website. Can be provided with or without the protocol (http:// or https://). If no protocol is specified, https:// will be automatically prepended.
+</ParamField>
+
+<ParamField path="address" type="string">
+  Physical address or location.
+</ParamField>
+
+<ParamField path="note" type="string">
+  Additional notes or information about the contact.
+</ParamField>
+
+## Encoding Format
+
+The vCard encoder (from `/src/domain/encoders/encoders.ts:30-55`) creates a vCard 3.0 formatted string:
+
+```typescript
+const encodeVCard = (data: VCardQrData) => {
+  const lines: string[] = ["BEGIN:VCARD", "VERSION:3.0"];
+
+  const fullName = `${data.firstName.trim()} ${data.lastName.trim()}`.trim();
+  lines.push(`FN:${fullName}`);
+  lines.push(`N:${data.lastName.trim()};${data.firstName.trim()};;;`);
+
+  if (data.phone?.trim()) lines.push(`TEL;TYPE=VOICE:${data.phone.trim()}`);
+  if (data.mobile?.trim()) lines.push(`TEL;TYPE=CELL:${data.mobile.trim()}`);
+  if (data.email?.trim()) lines.push(`EMAIL:${data.email.trim()}`);
+  if (data.organization?.trim()) lines.push(`ORG:${data.organization.trim()}`);
+  if (data.title?.trim()) lines.push(`TITLE:${data.title.trim()}`);
+  if (data.website?.trim()) {
+    let website = data.website.trim();
+    if (!website.startsWith("http://") && !website.startsWith("https://")) {
+      website = "https://" + website;
+    }
+    lines.push(`URL:${website}`);
+  }
+  if (data.address?.trim()) lines.push(`ADR:;;${data.address.trim()};;;`);
+  if (data.note?.trim()) lines.push(`NOTE:${data.note.trim()}`);
+
+  lines.push("END:VCARD");
+
+  return lines.join("\n");
+};
+```
+
+### vCard 3.0 Format Specification
+
+The encoded vCard follows this structure:
+
+```
+BEGIN:VCARD
+VERSION:3.0
+FN:<Full Name>
+N:<Last>;<First>;;;
+TEL;TYPE=VOICE:<phone>
+TEL;TYPE=CELL:<mobile>
+EMAIL:<email>
+ORG:<organization>
+TITLE:<title>
+URL:<website>
+ADR:;;<address>;;;
+NOTE:<note>
+END:VCARD
+```
+
+### Example Encoding
+
+Input:
+```typescript
+{
+  firstName: "John",
+  lastName: "Doe",
+  phone: "+1-555-1234",
+  mobile: "+1-555-5678",
+  email: "john.doe@example.com",
+  organization: "Acme Corp",
+  title: "Software Engineer",
+  website: "johndoe.com",
+  address: "123 Main St, Anytown, USA",
+  note: "Met at Tech Conference 2024"
+}
+```
+
+Output:
+```
+BEGIN:VCARD
+VERSION:3.0
+FN:John Doe
+N:Doe;John;;;
+TEL;TYPE=VOICE:+1-555-1234
+TEL;TYPE=CELL:+1-555-5678
+EMAIL:john.doe@example.com
+ORG:Acme Corp
+TITLE:Software Engineer
+URL:https://johndoe.com
+ADR:;;123 Main St, Anytown, USA;;;
+NOTE:Met at Tech Conference 2024
+END:VCARD
+```
+
+## Validation Rules
+
+The validator (from `/src/domain/validation/validators.ts:98-129`) enforces these requirements:
+
+<AccordionGroup>
+  <Accordion title="Required Fields">
+    Both `firstName` and `lastName` are mandatory:
+    - Cannot be empty or whitespace only
+    - Error messages:
+      - "El nombre es obligatorio"
+      - "El apellido es obligatorio"
+  </Accordion>
+
+  <Accordion title="Phone Number Validation">
+    For both `phone` and `mobile` fields (optional):
+    - If provided, must be at least 7 characters
+    - Can only contain: digits (0-9), spaces, dashes (-), plus signs (+), and parentheses ()
+    - Regex pattern: `/^[\d\s\-\+\(\)]+$/`
+    - Error messages:
+      - "Número de teléfono inválido"
+      - "Número de móvil inválido"
+  </Accordion>
+
+  <Accordion title="Email Validation">
+    For the `email` field (optional):
+    - If provided, must match standard email format
+    - Regex pattern: `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`
+    - Must contain @ symbol and a domain with extension
+    - Error message: "Email inválido"
+  </Accordion>
+
+  <Accordion title="Website Validation">
+    For the `website` field (optional):
+    - If provided, must be a valid URL
+    - Protocol (http:// or https://) is optional and will be added automatically
+    - Must pass JavaScript's `URL()` constructor validation
+    - Error message: "Sitio web inválido"
+  </Accordion>
+</AccordionGroup>
+
+### Validation Helper Functions
+
+```typescript
+const isValidPhone = (phone: string): boolean => {
+  const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+  return phone.trim().length >= 7 && phoneRegex.test(phone.trim());
+};
+
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
+};
+```
+
+## Usage Example
+
+```typescript
+import { QrTypeKey } from "./domain/types/qr";
+import type { VCardQrData } from "./domain/types/qr";
+import { encodeQrData } from "./domain/encoders/encoders";
+import { validateVCardQr } from "./domain/validation/validators";
+
+// Create vCard QR data
+const vcardData: VCardQrData = {
+  firstName: "Jane",
+  lastName: "Smith",
+  phone: "+1-555-9876",
+  mobile: "+1-555-4321",
+  email: "jane.smith@company.com",
+  organization: "Tech Solutions Inc",
+  title: "Senior Developer",
+  website: "janesmith.dev",
+  address: "456 Tech Avenue, Silicon Valley, CA",
+  note: "Specializes in cloud architecture"
+};
+
+// Validate the data
+const validation = validateVCardQr(vcardData);
+if (!validation.isValid) {
+  console.error("Validation errors:", validation.errors);
+}
+
+// Encode the data
+const encodedVCard = encodeQrData(QrTypeKey.VCard, vcardData);
+```
+
+## Common Use Cases
+
+- **Business Cards**: Replace or supplement traditional business cards
+- **Email Signatures**: Include in email signatures for easy contact saving
+- **Networking Events**: Share contact info quickly at conferences and meetups
+- **Marketing Materials**: Add to brochures, flyers, and promotional materials
+- **Name Tags**: Include on event badges for instant contact exchange
+- **Resumes**: Add to digital or printed resumes for easy contact
+
+## Best Practices
+
+<Tip>
+  While many fields are optional, providing at least one contact method (phone, mobile, or email) makes the vCard more useful.
+</Tip>
+
+- Include both first and last name for complete identification
+- Provide at least one phone number or email address
+- Keep the address concise to reduce QR code complexity
+- Test the generated QR code on multiple devices to ensure compatibility
+- Consider privacy - only include information you're comfortable sharing publicly

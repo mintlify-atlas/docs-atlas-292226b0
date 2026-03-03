@@ -1,0 +1,320 @@
+---
+title: Installation
+description: Set up Atomix QRGen locally for development or self-hosting
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    Version 18 or higher required
+  </Card>
+  <Card title="npm" icon="box">
+    Or any compatible Node package manager (pnpm, yarn)
+  </Card>
+</CardGroup>
+
+<Tip>
+  Check your Node version with `node --version`. If you need to install or update Node.js, visit [nodejs.org](https://nodejs.org).
+</Tip>
+
+## Quick setup
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Atomix QRGen repository from GitHub:
+    
+    ```bash
+    git clone https://github.com/Ephistopheles/atomix-qrgen.git
+    cd atomix-qrgen
+    ```
+    
+    <Info>
+      The repository includes all source code, dependencies configuration, and build scripts needed to run the project.
+    </Info>
+  </Step>
+
+  <Step title="Install dependencies">
+    Install the required npm packages:
+    
+    ```bash
+    npm install
+    ```
+    
+    This installs:
+    - **astro** (5.17.1) - Static site generator
+    - **preact** (10.28.3) - UI component library
+    - **tailwindcss** (4.1.18) - CSS framework
+    - **qr-code-styling** (1.9.2) - QR code generation
+    - **@astrojs/preact** (4.1.3) - Astro integration for Preact
+    
+    <Tip>
+      Using **pnpm** or **yarn**? They work too! Just run `pnpm install` or `yarn install` instead.
+    </Tip>
+  </Step>
+
+  <Step title="Start the development server">
+    Launch the local development server:
+    
+    ```bash
+    npm run dev
+    ```
+    
+    You should see output similar to:
+    
+    ```plaintext
+    🚀 astro v5.17.1 started in 150ms
+    
+    ┃ Local    http://localhost:4321/
+    ┃ Network  use --host to expose
+    ```
+    
+    Open [http://localhost:4321](http://localhost:4321) in your browser to see the app running.
+    
+    <Note>
+      The dev server includes hot module replacement (HMR), so changes to your code will automatically refresh the browser.
+    </Note>
+  </Step>
+
+  <Step title="Start generating QR codes">
+    The app is now running locally! Try generating a QR code:
+    
+    1. Select a QR type (e.g., **URL / Link**)
+    2. Enter your data
+    3. See the real-time preview
+    4. Download or print your QR code
+    
+    <Success>
+      You're all set! Start exploring the codebase or customize the app to your needs.
+    </Success>
+  </Step>
+</Steps>
+
+## Available commands
+
+Atomix QRGen includes several npm scripts for development and production:
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start the local development server at `http://localhost:4321` |
+| `npm run build` | Build the optimized production site to `./dist` |
+| `npm run preview` | Preview the production build locally before deployment |
+| `npm run astro` | Run Astro CLI commands directly |
+
+### Development workflow
+
+```bash
+# Start development server
+npm run dev
+
+# Make your changes...
+# The browser auto-refreshes with HMR
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## Project structure
+
+Understanding the codebase structure helps you navigate and modify the project:
+
+```plaintext
+atomix-qrgen/
+├── src/
+│   ├── pages/
+│   │   └── index.astro              # Main entry point
+│   ├── layouts/
+│   │   └── RootLayout.astro         # Global layout and meta tags
+│   ├── components/
+│   │   ├── qr-code-app/
+│   │   │   ├── app/
+│   │   │   │   └── qr-gen-app.tsx   # Main app logic and state
+│   │   │   └── cards/
+│   │   │       ├── qr-types/        # QR type selector
+│   │   │       ├── content-input-card/  # Dynamic form container
+│   │   │       └── qr-preview/      # QR display & download
+│   │   └── forms/
+│   │       ├── url/                 # URL form component
+│   │       ├── text/                # Text form component
+│   │       ├── wifi/                # WiFi form component
+│   │       ├── v-card-form/         # vCard form component
+│   │       ├── event-form/          # Event form component
+│   │       ├── payment-form/        # Payment form component
+│   │       └── shared/              # Reusable form inputs
+│   ├── domain/
+│   │   ├── types/
+│   │   │   └── qr.ts                # TypeScript type definitions
+│   │   ├── encoders/
+│   │   │   └── encoders.ts          # QR data format encoders
+│   │   ├── validation/
+│   │   │   └── validators.ts        # Input validation logic
+│   │   ├── form/
+│   │   │   └── form-registry.ts     # Form component registry
+│   │   ├── hooks/
+│   │   │   └── use-form-data.ts     # Form state management
+│   │   └── ui/
+│   │       └── toast.ts             # Toast notifications
+│   └── styles/
+│       └── global.css               # Tailwind config and utilities
+├── public/                          # Static assets
+├── astro.config.mjs                 # Astro configuration
+├── package.json                     # Dependencies and scripts
+└── tsconfig.json                    # TypeScript configuration
+```
+
+<Accordion title="Component architecture">
+  The app uses a component-based architecture:
+  
+  - **Astro components** (`.astro`) - Static pages and layouts
+  - **Preact components** (`.tsx`) - Interactive UI with client-side state
+  - **Domain logic** (`domain/`) - Encoders, validators, types (framework-agnostic)
+</Accordion>
+
+## Configuration
+
+### Astro config
+
+The Astro configuration enables Preact integration and Tailwind CSS:
+
+```javascript
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import tailwindcss from '@tailwindcss/vite';
+import preact from '@astrojs/preact';
+
+export default defineConfig({
+  vite: {
+    plugins: [tailwindcss()]
+  },
+  integrations: [preact()]
+});
+```
+
+### TypeScript config
+
+TypeScript is configured for strict type checking:
+
+```json
+// tsconfig.json
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  }
+}
+```
+
+## Building for production
+
+When you're ready to deploy:
+
+<Steps>
+  <Step title="Build the static site">
+    ```bash
+    npm run build
+    ```
+    
+    This creates an optimized production build in the `./dist` directory with:
+    - Minified JavaScript and CSS
+    - Optimized images
+    - Pre-rendered HTML pages
+  </Step>
+
+  <Step title="Preview the build">
+    Test the production build locally:
+    
+    ```bash
+    npm run preview
+    ```
+    
+    This serves the `./dist` folder at `http://localhost:4321` to verify everything works.
+  </Step>
+
+  <Step title="Deploy">
+    Deploy the `./dist` folder to any static hosting service:
+    
+    - **Vercel**: Connect your GitHub repo for automatic deployments
+    - **Netlify**: Drag and drop the `dist` folder or use Git integration
+    - **GitHub Pages**: Push to `gh-pages` branch
+    - **Cloudflare Pages**: Connect repository or upload directly
+    
+    <Info>
+      Atomix QRGen is a static site with no backend requirements, making deployment simple and cost-effective.
+    </Info>
+  </Step>
+</Steps>
+
+## Development tips
+
+<AccordionGroup>
+  <Accordion title="Hot module replacement">
+    The dev server automatically refreshes when you save changes. For Preact components, state is preserved across refreshes when possible.
+  </Accordion>
+  
+  <Accordion title="Adding a new QR type">
+    To add a new QR format:
+    
+    1. Define the type in `src/domain/types/qr.ts`
+    2. Create an encoder in `src/domain/encoders/encoders.ts`
+    3. Add validation in `src/domain/validation/validators.ts`
+    4. Build the form component in `src/components/forms/`
+    5. Register in `src/domain/form/form-registry.ts`
+    6. Add to the type selector in `card-qr-type.tsx`
+  </Accordion>
+  
+  <Accordion title="Customizing QR appearance">
+    Modify QR code styling in `card-qr-preview.tsx:27-33`:
+    
+    ```tsx
+    qr.current = new QRCodeStyling({
+      width: 280,
+      height: 280,
+      dotsOptions: { type: "rounded", color: "#000" },
+      backgroundOptions: { color: "#ffffff" },
+      // Add image, corner styling, etc.
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Browser compatibility">
+    Atomix QRGen works in all modern browsers:
+    - Chrome/Edge 90+
+    - Firefox 88+
+    - Safari 14+
+    
+    The `qr-code-styling` library handles browser differences automatically.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<Warning>
+  **Port already in use?** If port 4321 is occupied, Astro will automatically try the next available port. Check the terminal output for the actual port.
+</Warning>
+
+<Note>
+  **Build errors?** Ensure you're using Node.js 18+ and all dependencies are installed. Try deleting `node_modules` and `package-lock.json`, then run `npm install` again.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Learn how to use the app to generate QR codes
+  </Card>
+  <Card title="QR types" icon="shapes" href="/qr-types/url">
+    Explore all supported QR code formats
+  </Card>
+  <Card title="API reference" icon="code" href="/api/encoders">
+    Deep dive into encoders and validators
+  </Card>
+  <Card title="Contributing" icon="users" href="https://github.com/Ephistopheles/atomix-qrgen">
+    Contribute to the project on GitHub
+  </Card>
+</CardGroup>

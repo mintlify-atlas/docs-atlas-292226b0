@@ -1,0 +1,188 @@
+---
+title: 'WiFi QR Codes'
+description: 'Generate QR codes for WiFi network credentials'
+icon: 'wifi'
+---
+
+## Overview
+
+WiFi QR codes allow users to connect to wireless networks instantly by scanning a code, without manually typing network names and passwords. Most modern smartphones automatically detect WiFi QR codes and prompt the user to join the network. This is especially useful for guest networks, businesses, cafes, and events.
+
+## Data Structure
+
+WiFi QR codes use the `WifiQrData` interface:
+
+```typescript
+export interface WifiQrData {
+  ssid: string;
+  password: string;
+  security: "WPA" | "WEP" | "nopass";
+}
+```
+
+<ParamField path="ssid" type="string" required>
+  The network name (SSID - Service Set Identifier). Must be 1-32 characters in length.
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  The network password. Required for WPA and WEP security types. Minimum 8 characters for WPA, 5 characters for WEP. Maximum 63 characters. Leave empty for open networks (nopass).
+</ParamField>
+
+<ParamField path="security" type="'WPA' | 'WEP' | 'nopass'" required>
+  The network security type:
+  - `"WPA"`: WPA/WPA2/WPA3 encrypted networks (most common)
+  - `"WEP"`: WEP encrypted networks (legacy, not recommended)
+  - `"nopass"`: Open networks without password protection
+</ParamField>
+
+## Encoding Format
+
+WiFi QR codes use a standardized format (from `/src/domain/encoders/encoders.ts:25-28`):
+
+```typescript
+const encodeWifi = (data: WifiQrData) => {
+  const password = data.security === "nopass" ? "" : data.password.trim();
+  return `WIFI:T:${data.security};S:${data.ssid.trim()};P:${password};;`;
+};
+```
+
+### Format Specification
+
+The WiFi QR code format follows this structure:
+
+```
+WIFI:T:<security_type>;S:<ssid>;P:<password>;;
+```
+
+Where:
+- `T:` - Authentication type (WPA, WEP, or nopass)
+- `S:` - Network SSID (name)
+- `P:` - Network password (empty for open networks)
+- `;;` - Terminator
+
+### Example Encoding
+
+| Input | Encoded Output |
+|-------|----------------|
+| SSID: "MyNetwork"<br/>Password: "secret123"<br/>Security: "WPA" | `WIFI:T:WPA;S:MyNetwork;P:secret123;;` |
+| SSID: "GuestWiFi"<br/>Security: "nopass" | `WIFI:T:nopass;S:GuestWiFi;P:;;` |
+| SSID: "Office-5G"<br/>Password: "password"<br/>Security: "WEP" | `WIFI:T:WEP;S:Office-5G;P:password;;` |
+
+## Validation Rules
+
+The validator (from `/src/domain/validation/validators.ts:71-96`) enforces these requirements:
+
+<AccordionGroup>
+  <Accordion title="SSID Requirements">
+    - Cannot be empty or whitespace only
+    - Maximum length: 32 characters (WiFi standard)
+    - Error messages:
+      - "El SSID es obligatorio"
+      - "El SSID no puede tener más de 32 caracteres"
+  </Accordion>
+
+  <Accordion title="Password Requirements (WPA)">
+    For `security: "WPA"`:
+    - Password is required (cannot be empty)
+    - Minimum length: 8 characters
+    - Maximum length: 63 characters
+    - Error messages:
+      - "La contraseña es obligatoria para redes con seguridad"
+      - "La contraseña WPA/WPA2 debe tener al menos 8 caracteres"
+      - "La contraseña no puede tener más de 63 caracteres"
+  </Accordion>
+
+  <Accordion title="Password Requirements (WEP)">
+    For `security: "WEP"`:
+    - Password is required (cannot be empty)
+    - Minimum length: 5 characters
+    - Maximum length: 63 characters
+    - Error messages:
+      - "La contraseña es obligatoria para redes con seguridad"
+      - "La contraseña WEP debe tener al menos 5 caracteres"
+      - "La contraseña no puede tener más de 63 caracteres"
+  </Accordion>
+
+  <Accordion title="Open Network (nopass)">
+    For `security: "nopass"`:
+    - Password is not required and will be ignored in encoding
+    - No password validation is performed
+  </Accordion>
+</AccordionGroup>
+
+### Validation Implementation
+
+```typescript
+export const validateWifiQr = (data: WifiQrData): ValidationResult => {
+  const errors: Record<string, string> = {};
+
+  if (!data.ssid || data.ssid.trim() === "") {
+    errors.ssid = "El SSID es obligatorio";
+  } else if (data.ssid.trim().length > 32) {
+    errors.ssid = "El SSID no puede tener más de 32 caracteres";
+  }
+
+  if (data.security !== "nopass") {
+    if (!data.password || data.password.trim() === "") {
+      errors.password = "La contraseña es obligatoria para redes con seguridad";
+    } else if (data.security === "WEP" && data.password.length < 5) {
+      errors.password = "La contraseña WEP debe tener al menos 5 caracteres";
+    } else if (data.security === "WPA" && data.password.length < 8) {
+      errors.password = "La contraseña WPA/WPA2 debe tener al menos 8 caracteres";
+    } else if (data.password.length > 63) {
+      errors.password = "La contraseña no puede tener más de 63 caracteres";
+    }
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+```
+
+## Usage Example
+
+```typescript
+import { QrTypeKey } from "./domain/types/qr";
+import type { WifiQrData } from "./domain/types/qr";
+import { encodeQrData } from "./domain/encoders/encoders";
+import { validateWifiQr } from "./domain/validation/validators";
+
+// Create WiFi QR data for a WPA network
+const wifiData: WifiQrData = {
+  ssid: "CoffeeShop-Guest",
+  password: "welcome2024",
+  security: "WPA"
+};
+
+// Validate the data
+const validation = validateWifiQr(wifiData);
+if (!validation.isValid) {
+  console.error("Validation errors:", validation.errors);
+}
+
+// Encode the data
+const encodedWifi = encodeQrData(QrTypeKey.Wifi, wifiData);
+// Result: "WIFI:T:WPA;S:CoffeeShop-Guest;P:welcome2024;;"
+```
+
+## Common Use Cases
+
+- **Guest Networks**: Provide easy WiFi access for visitors
+- **Businesses**: Share network credentials with customers (cafes, restaurants, hotels)
+- **Events**: Allow attendees to connect quickly at conferences or gatherings
+- **Offices**: Simplify onboarding for new employees
+- **Home Networks**: Share WiFi with guests without revealing the password verbally
+
+## Security Considerations
+
+<Warning>
+  WiFi QR codes contain your network password in plain text. Anyone who can scan the code can access your network.
+</Warning>
+
+- Use WiFi QR codes only for guest networks or networks you intend to share publicly
+- Consider using a separate guest network isolated from your main network
+- For WPA networks, ensure you're using WPA2 or WPA3 on your router
+- Avoid using WEP encryption as it's outdated and insecure
+- Regularly rotate guest network passwords

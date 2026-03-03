@@ -1,0 +1,324 @@
+---
+title: Architecture
+description: Project architecture and structure of Atomix QRGen
+---
+
+## Overview
+
+Atomix QRGen uses a modern, component-based architecture powered by **Astro**, **Preact**, and **Tailwind CSS**. The application runs entirely client-side, ensuring privacy and security by never transmitting data to external servers.
+
+## Technology Stack
+
+- **[Astro](https://astro.build)** - Static site generator with partial hydration
+- **[Preact](https://preactjs.com)** - Lightweight React alternative for interactive components
+- **[Tailwind CSS](https://tailwindcss.com)** - Utility-first CSS framework
+- **[qr-code-styling](https://github.com/kozakdenys/qr-code-styling)** - QR code generation library
+
+## Project Structure
+
+```
+ephistopheles-atomix-qrgen/
+├── astro.config.mjs        → Astro and Preact integration config
+├── package.json            → Project metadata and scripts
+├── tsconfig.json           → TypeScript configuration
+└── src/
+    ├── pages/
+    │   └── index.astro     → Main application entry point
+    ├── layouts/
+    │   └── RootLayout.astro → Global layout, fonts and meta
+    ├── components/
+    │   ├── pages/
+    │   │   └── qr-code-generator.astro → Page wrapper component
+    │   ├── qr-code-app/
+    │   │   ├── app/
+    │   │   │   └── qr-gen-app.tsx → Main app logic and state
+    │   │   └── cards/
+    │   │       ├── qr-types/
+    │   │       │   └── card-qr-type.tsx → QR type selector
+    │   │       ├── content-input-card/
+    │   │       │   └── card-content-input.tsx → Dynamic form container
+    │   │       └── qr-preview/
+    │   │           └── card-qr-preview.tsx → QR code display & download
+    │   └── forms/
+    │       ├── url/
+    │       │   └── url-form.tsx        → URL input form
+    │       ├── text/
+    │       │   └── text-form.tsx       → Plain text form
+    │       ├── wifi/
+    │       │   └── wifi-form.tsx       → WiFi credentials form
+    │       ├── v-card-form/
+    │       │   └── v-card-form.tsx     → Contact info form
+    │       ├── event-form/
+    │       │   └── event-form.tsx      → Calendar event form
+    │       ├── payment-form/
+    │       │   └── payment-form.tsx    → Payment details form
+    │       └── shared/
+    │           └── form-input.tsx      → Reusable input component
+    ├── domain/
+    │   ├── types/
+    │   │   └── qr.ts             → TypeScript type definitions
+    │   ├── encoders/
+    │   │   └── encoders.ts       → QR data format encoders
+    │   ├── validation/
+    │   │   └── validators.ts     → Input validation logic
+    │   ├── form/
+    │   │   └── form-registry.ts  → Form component registry
+    │   ├── hooks/
+    │   │   └── use-form-data.ts  → Form state management hook
+    │   └── ui/
+    │       └── toast.ts          → Toast notification system
+    └── styles/
+        └── global.css            → Tailwind base styles and custom utilities
+```
+
+## Architectural Layers
+
+### 1. Presentation Layer
+
+The presentation layer consists of Astro pages and Preact components:
+
+#### Pages (`src/pages/`)
+- **index.astro** - Entry point that renders the RootLayout with QrCodeGenerator
+- Uses Astro's file-based routing system
+
+#### Layouts (`src/layouts/`)
+- **RootLayout.astro** - Provides global HTML structure, metadata, and styling
+- Includes SEO meta tags and favicon configuration
+- Applies Tailwind CSS global styles
+
+#### Components (`src/components/`)
+
+**Page Components** (`pages/`)
+- Bridge between Astro pages and Preact components
+- `qr-code-generator.astro` wraps the main Preact app
+
+**App Components** (`qr-code-app/`)
+- `qr-gen-app.tsx` - Root component managing application state
+- Coordinates between QR type selection, form input, and preview
+
+**Card Components** (`qr-code-app/cards/`)
+- `card-qr-type.tsx` - QR type selector with 6 format options
+- `card-content-input.tsx` - Dynamic form container using form registry
+- `card-qr-preview.tsx` - QR code display with download functionality
+
+**Form Components** (`forms/`)
+- Type-specific forms (URL, Text, WiFi, vCard, Event, Payment)
+- `form-input.tsx` - Reusable input component with validation error display
+
+### 2. Domain Layer
+
+The domain layer contains business logic, separated from UI concerns:
+
+#### Types (`src/domain/types/qr.ts`)
+Defines TypeScript interfaces for all QR data types:
+
+```typescript
+export enum QrTypeKey {
+  PlainText = "PT",
+  Url = "UL",
+  Wifi = "WF",
+  VCard = "VC",
+  Payment = "PB",
+  Event = "EV",
+}
+
+export interface UrlQrData {
+  url: string;
+}
+
+export interface WifiQrData {
+  ssid: string;
+  password: string;
+  security: "WPA" | "WEP" | "nopass";
+}
+
+// Additional interfaces for VCard, Event, Payment, Text
+```
+
+#### Encoders (`src/domain/encoders/encoders.ts`)
+Transforms form data into QR-compatible formats:
+
+- `encodeText()` - Plain text encoding
+- `encodeUrl()` - URL encoding with protocol normalization
+- `encodeWifi()` - WiFi format: `WIFI:T:WPA;S:NetworkName;P:password;;`
+- `encodeVCard()` - vCard 3.0 format for contact information
+- `encodeEvent()` - iCalendar (VEVENT) format for calendar events
+- `encodePayment()` - Payment request format
+- `encodeQrData()` - Main encoder that routes to specific encoders
+
+#### Validators (`src/domain/validation/validators.ts`)
+Provides validation logic for each QR type:
+
+```typescript
+export interface ValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+// Type-specific validators
+export const validateUrlQr = (data: UrlQrData): ValidationResult => {...}
+export const validateWifiQr = (data: WifiQrData): ValidationResult => {...}
+export const validateVCardQr = (data: VCardQrData): ValidationResult => {...}
+// Additional validators for Event, Payment, Text
+
+// Main validator that routes to specific validators
+export const validateQrData = (type: QrTypeKey, data: QrDataUnion): ValidationResult => {...}
+```
+
+Validation includes:
+- Required field checks
+- Format validation (URLs, emails, phone numbers)
+- Length constraints
+- Type-specific business rules (e.g., WiFi password requirements)
+
+#### Form Registry (`src/domain/form/form-registry.ts`)
+Maps QR types to their corresponding form components:
+
+```typescript
+export const formRegistry = {
+  [QrTypeKey.PlainText]: TextForm,
+  [QrTypeKey.Url]: UrlForm,
+  [QrTypeKey.Wifi]: WifiForm,
+  [QrTypeKey.VCard]: VCardForm,
+  [QrTypeKey.Payment]: PaymentForm,
+  [QrTypeKey.Event]: EventForm,
+};
+```
+
+This allows dynamic form rendering based on selected QR type.
+
+#### Hooks (`src/domain/hooks/use-form-data.ts`)
+Custom Preact hook for form state management:
+
+```typescript
+export function useFormData<T>({
+  initialData,
+  onChange,
+  validate,
+}: UseFormDataOptions<T>): UseFormDataReturn<T>
+```
+
+Features:
+- Generic type support for any form data structure
+- Automatic validation on field updates
+- Error state management
+- Change callback propagation to parent components
+
+#### UI Utilities (`src/domain/ui/toast.ts`)
+Toast notification system for user feedback:
+
+```typescript
+export function showToast({
+  message,
+  type = "info",
+  duration = 3000,
+}: ToastConfig)
+```
+
+Supports success, error, warning, and info message types.
+
+### 3. State Management
+
+State flows unidirectionally through the component tree:
+
+```
+QrGenApp (root state)
+    ├── type: QrTypeKey | null
+    └── data: QrDataUnion | null
+         |
+         ├──> CardQrType (type selection)
+         ├──> CardContentInput (form data)
+         └──> CardQrPreview (QR generation)
+```
+
+**State Flow:**
+1. User selects QR type in `CardQrType`
+2. `QrGenApp` updates `type` state
+3. `CardContentInput` renders corresponding form from registry
+4. Form updates trigger `data` state changes
+5. `CardQrPreview` receives data and generates QR code
+
+### 4. Data Flow
+
+```
+User Input
+    ↓
+Form Component (e.g., UrlForm)
+    ↓
+useFormData hook
+    ↓
+Validation (validators.ts)
+    ↓
+QrGenApp state update
+    ↓
+CardQrPreview
+    ↓
+Encoder (encoders.ts)
+    ↓
+qr-code-styling library
+    ↓
+QR Code Display
+```
+
+## Configuration
+
+### Astro Configuration (`astro.config.mjs`)
+
+```javascript
+import { defineConfig } from 'astro/config';
+import tailwindcss from '@tailwindcss/vite';
+import preact from '@astrojs/preact';
+
+export default defineConfig({
+  vite: {
+    plugins: [tailwindcss()]
+  },
+  integrations: [preact()]
+});
+```
+
+Integrates:
+- Preact for component reactivity
+- Tailwind CSS via Vite plugin
+
+### TypeScript Configuration
+
+The project uses TypeScript for type safety across all components and domain logic.
+
+## Privacy & Security Architecture
+
+The application follows a **zero-server architecture**:
+
+- All QR code generation happens client-side in the browser
+- No data is transmitted to external servers
+- No analytics or tracking scripts
+- No cookies or local storage of sensitive data
+- Static site generation ensures minimal attack surface
+
+This makes the app:
+- **Fast** - No network requests for QR generation
+- **Private** - User data never leaves the browser
+- **Secure** - No backend to compromise
+- **Cheap** - Static hosting (free on many platforms)
+
+## Build Output
+
+Astro generates a static site:
+
+```bash
+npm run build
+```
+
+Produces optimized HTML, CSS, and JavaScript:
+- HTML with inlined critical CSS
+- JavaScript bundles for Preact components (client-side only)
+- Minimal JavaScript - only what's needed for interactivity
+- Tree-shaken and minified production build
+
+## Performance Characteristics
+
+- **Partial Hydration**: Only interactive components (Preact) are hydrated
+- **Islands Architecture**: Astro renders static HTML, hydrating only `qr-gen-app.tsx`
+- **No SSR Needed**: Everything is pre-rendered at build time
+- **Small Bundle Size**: Preact is ~3KB vs React's ~40KB
+- **Fast Time-to-Interactive**: Static HTML loads instantly, JS enhances progressively

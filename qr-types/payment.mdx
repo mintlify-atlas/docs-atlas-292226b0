@@ -1,0 +1,317 @@
+---
+title: 'Payment QR Codes'
+description: 'Generate QR codes for payment requests and cryptocurrency addresses'
+icon: 'money-bill'
+---
+
+## Overview
+
+Payment QR codes encode payment request information that can be used to initiate transactions. They support both traditional bank transfers and cryptocurrency payments. When scanned, payment apps can auto-fill the recipient details and amount, streamlining the payment process.
+
+## Data Structure
+
+Payment QR codes use the `PaymentQrData` interface:
+
+```typescript
+export interface PaymentQrData {
+  method: string;
+  name: string;
+  account: string;
+  bank: string;
+  amount: number;
+  reference: string;
+}
+```
+
+<ParamField path="method" type="string" required>
+  Payment method identifier. Use `"crypto"` for cryptocurrency payments or any other identifier for traditional bank transfers.
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Name of the payment recipient or account holder.
+</ParamField>
+
+<ParamField path="account" type="string" required>
+  Account number (for bank transfers) or cryptocurrency wallet address. For crypto, must be at least 26 characters. For bank transfers, must contain only digits, dashes, and spaces.
+</ParamField>
+
+<ParamField path="bank" type="string" required>
+  Bank name (for traditional transfers) or platform/cryptocurrency name (e.g., "Bitcoin", "Ethereum").
+</ParamField>
+
+<ParamField path="amount" type="number" required>
+  Payment amount. Must be greater than 0.
+</ParamField>
+
+<ParamField path="reference" type="string">
+  Optional payment reference, memo, or note (e.g., invoice number, order ID).
+</ParamField>
+
+## Encoding Format
+
+The payment encoder (from `/src/domain/encoders/encoders.ts:57-74`) uses different formats for crypto vs traditional payments:
+
+```typescript
+const encodePayment = (data: PaymentQrData) => {
+  if (data.method === "crypto") {
+    return `${data.account.trim()}?amount=${data.amount}`;
+  }
+
+  const parts: string[] = [
+    `account=${data.account.trim()}`,
+    `name=${data.name.trim()}`,
+    `bank=${data.bank.trim()}`,
+    `amount=${data.amount}`,
+  ];
+
+  if (data.reference?.trim()) {
+    parts.push(`reference=${data.reference.trim()}`);
+  }
+
+  return parts.join("&");
+};
+```
+
+### Cryptocurrency Format
+
+For cryptocurrency payments (`method: "crypto"`):
+
+```
+<wallet_address>?amount=<amount>
+```
+
+**Example:**
+```
+1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.05
+```
+
+### Traditional Payment Format
+
+For bank transfers (any method other than `"crypto"`):
+
+```
+account=<account>&name=<name>&bank=<bank>&amount=<amount>&reference=<reference>
+```
+
+**Example:**
+```
+account=1234567890&name=John Doe&bank=Example Bank&amount=150.50&reference=INV-2024-001
+```
+
+### Example Encodings
+
+<AccordionGroup>
+  <Accordion title="Cryptocurrency Payment">
+    Input:
+    ```typescript
+    {
+      method: "crypto",
+      name: "Donation Fund",
+      account: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+      bank: "Bitcoin",
+      amount: 0.001,
+      reference: "Donation"
+    }
+    ```
+    
+    Output:
+    ```
+    1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.001
+    ```
+  </Accordion>
+
+  <Accordion title="Bank Transfer Payment">
+    Input:
+    ```typescript
+    {
+      method: "bank_transfer",
+      name: "Acme Corp",
+      account: "9876543210",
+      bank: "Global Bank",
+      amount: 299.99,
+      reference: "Order #12345"
+    }
+    ```
+    
+    Output:
+    ```
+    account=9876543210&name=Acme Corp&bank=Global Bank&amount=299.99&reference=Order #12345
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Validation Rules
+
+The validator (from `/src/domain/validation/validators.ts:131-168`) enforces these requirements:
+
+<AccordionGroup>
+  <Accordion title="Required Fields">
+    The following fields cannot be empty or whitespace only:
+    - `method` - "El método de pago es obligatorio"
+    - `name` - "El nombre del destinatario es obligatorio"
+    - `account` - "La cuenta o dirección es obligatoria"
+    - `bank` - "El banco o plataforma es obligatorio"
+  </Accordion>
+
+  <Accordion title="Account Validation (Cryptocurrency)">
+    For `method: "crypto"`:
+    - Account (wallet address) must be at least 26 characters
+    - No format restrictions on characters
+    - Error: "Dirección de criptomoneda inválida (muy corta)"
+  </Accordion>
+
+  <Accordion title="Account Validation (Bank Transfer)">
+    For other methods (bank transfers):
+    - Must contain only digits, dashes, and spaces
+    - Regex pattern: `/^[\d\-\s]+$/`
+    - Error: "Número de cuenta inválido (solo números, guiones y espacios)"
+  </Accordion>
+
+  <Accordion title="Amount Validation">
+    The `amount` field must:
+    - Be greater than 0
+    - Be a valid number (not NaN)
+    - Errors:
+      - "El monto debe ser mayor a 0"
+      - "El monto debe ser un número válido"
+  </Accordion>
+
+  <Accordion title="Reference Field">
+    The `reference` field is optional and has no specific validation rules.
+  </Accordion>
+</AccordionGroup>
+
+### Validation Implementation
+
+```typescript
+export const validatePaymentQr = (data: PaymentQrData): ValidationResult => {
+  const errors: Record<string, string> = {};
+
+  if (!data.method || data.method.trim() === "") {
+    errors.method = "El método de pago es obligatorio";
+  }
+
+  if (!data.name || data.name.trim() === "") {
+    errors.name = "El nombre del destinatario es obligatorio";
+  }
+
+  if (!data.account || data.account.trim() === "") {
+    errors.account = "La cuenta o dirección es obligatoria";
+  } else if (data.method === "crypto") {
+    if (data.account.trim().length < 26) {
+      errors.account = "Dirección de criptomoneda inválida (muy corta)";
+    }
+  } else {
+    if (!/^[\d\-\s]+$/.test(data.account.trim())) {
+      errors.account = "Número de cuenta inválido (solo números, guiones y espacios)";
+    }
+  }
+
+  if (!data.bank || data.bank.trim() === "") {
+    errors.bank = "El banco o plataforma es obligatorio";
+  }
+
+  if (data.amount <= 0) {
+    errors.amount = "El monto debe ser mayor a 0";
+  } else if (isNaN(data.amount)) {
+    errors.amount = "El monto debe ser un número válido";
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+```
+
+## Usage Examples
+
+### Bank Transfer Payment
+
+```typescript
+import { QrTypeKey } from "./domain/types/qr";
+import type { PaymentQrData } from "./domain/types/qr";
+import { encodeQrData } from "./domain/encoders/encoders";
+import { validatePaymentQr } from "./domain/validation/validators";
+
+// Create bank payment QR data
+const bankPayment: PaymentQrData = {
+  method: "bank_transfer",
+  name: "Coffee Shop Inc",
+  account: "1234-5678-9012",
+  bank: "National Bank",
+  amount: 24.50,
+  reference: "Table 7 - Order #42"
+};
+
+// Validate the data
+const validation = validatePaymentQr(bankPayment);
+if (!validation.isValid) {
+  console.error("Validation errors:", validation.errors);
+}
+
+// Encode the data
+const encodedPayment = encodeQrData(QrTypeKey.Payment, bankPayment);
+// Result: "account=1234-5678-9012&name=Coffee Shop Inc&bank=National Bank&amount=24.5&reference=Table 7 - Order #42"
+```
+
+### Cryptocurrency Payment
+
+```typescript
+// Create crypto payment QR data
+const cryptoPayment: PaymentQrData = {
+  method: "crypto",
+  name: "Development Fund",
+  account: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+  bank: "Bitcoin",
+  amount: 0.0025,
+  reference: "" // Reference is ignored for crypto
+};
+
+// Validate the data
+const validation = validatePaymentQr(cryptoPayment);
+if (!validation.isValid) {
+  console.error("Validation errors:", validation.errors);
+}
+
+// Encode the data
+const encodedCrypto = encodeQrData(QrTypeKey.Payment, cryptoPayment);
+// Result: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh?amount=0.0025"
+```
+
+## Common Use Cases
+
+- **Point of Sale**: Generate payment QR codes at checkout
+- **Invoicing**: Include payment QR codes on invoices
+- **Donations**: Accept donations via bank transfer or cryptocurrency
+- **Bill Splitting**: Share payment details for splitting bills
+- **Merchant Payments**: Simplify customer payments at stores, restaurants, cafes
+- **P2P Transfers**: Share account details for peer-to-peer payments
+- **Online Orders**: Include in order confirmations for easy payment
+
+## Security Considerations
+
+<Warning>
+  Payment QR codes contain sensitive financial information. Ensure they are only shared with intended recipients.
+</Warning>
+
+- **Verify amounts**: Always double-check the payment amount before generating the QR code
+- **Secure distribution**: Only share payment QR codes through secure channels
+- **Time limits**: Consider implementing expiration times for payment QR codes
+- **Confirmation**: Users should verify recipient details before completing payment
+- **Cryptocurrency**: For crypto payments, always verify the wallet address is correct
+
+## Supported Payment Methods
+
+While the `method` field accepts any string, common values include:
+
+- `"crypto"` - Cryptocurrency payments (triggers special encoding)
+- `"bank_transfer"` - Traditional bank transfers
+- `"ach"` - ACH transfers
+- `"wire"` - Wire transfers
+- `"sepa"` - SEPA transfers (Europe)
+- Custom values for region-specific payment methods
+
+<Note>
+  Only `"crypto"` triggers the special cryptocurrency encoding format. All other method values use the standard bank transfer format.
+</Note>
