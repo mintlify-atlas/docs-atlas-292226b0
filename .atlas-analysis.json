@@ -1,0 +1,91 @@
+{
+  "projectType": "frontend",
+  "projectName": "Atomix QRGen",
+  "projectDescription": "A modern, privacy-focused QR code generator supporting URL, Text, WiFi, vCard, Event, and Payment formats with client-side generation.",
+  "theme": "palm",
+  "primaryColor": "#6366f1",
+  "lightColor": "#818cf8",
+  "darkColor": "#4f46e5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "QR Code Types",
+            "pages": [
+              "qr-types/url",
+              "qr-types/text",
+              "qr-types/wifi",
+              "qr-types/vcard",
+              "qr-types/event",
+              "qr-types/payment"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/customization",
+              "guides/downloading",
+              "guides/privacy-security"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/architecture",
+              "development/components",
+              "development/contributing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core",
+            "pages": [
+              "api/types",
+              "api/encoders",
+              "api/validators"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Generate QR codes for 6 different formats (URL, Text, WiFi, vCard, Event, Payment)",
+    "100% client-side generation with no backend or data storage",
+    "Real-time QR code preview and download functionality",
+    "Form validation for each QR code type",
+    "Privacy-focused design with no tracking or external requests",
+    "Built with Astro, Preact, and Tailwind CSS"
+  ],
+  "publicApiSurface": [
+    "QrTypeKey enum (PlainText, Url, Wifi, VCard, Payment, Event)",
+    "TextQrData interface",
+    "UrlQrData interface",
+    "WifiQrData interface",
+    "VCardQrData interface",
+    "PaymentQrData interface",
+    "EventQrData interface",
+    "encodeQrData(type, data) function",
+    "validateQrData(type, data) function",
+    "validateTextQr(data) function",
+    "validateUrlQr(data) function",
+    "validateWifiQr(data) function",
+    "validateVCardQr(data) function",
+    "validatePaymentQr(data) function",
+    "validateEventQr(data) function"
+  ]
+}
