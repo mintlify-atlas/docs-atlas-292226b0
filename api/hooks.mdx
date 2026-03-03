@@ -1,0 +1,132 @@
+---
+title: Hooks
+description: React hooks for form state management in Atomix QRGen
+icon: 'hook'
+---
+
+## useFormData
+
+A custom Preact hook for managing form state with validation support. This hook is used internally by all QR code type forms to handle input, validation, and error state.
+
+### Type Signature
+
+```typescript
+function useFormData<T extends Record<string, any>>(
+  options: UseFormDataOptions<T>
+): UseFormDataReturn<T>
+```
+
+### Parameters
+
+<ParamField path="options" type="UseFormDataOptions<T>" required>
+  Configuration object for the hook.
+
+  <Expandable title="UseFormDataOptions">
+    <ParamField path="initialData" type="T" required>
+      Initial state for the form data. Must be an object with string keys.
+    </ParamField>
+
+    <ParamField path="onChange" type="(data: T, isValid?: boolean) => void">
+      Callback fired when form data changes. Receives the updated data and optional validation status.
+    </ParamField>
+
+    <ParamField path="validate" type="(data: T) => ValidationResult">
+      Validation function to run on form data. Should return a `ValidationResult` with `isValid` boolean and `errors` object.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Return Value
+
+<ResponseField name="data" type="T">
+  Current form data state.
+</ResponseField>
+
+<ResponseField name="setData" type="Dispatch<T>">
+  Direct state setter for the entire form data object.
+</ResponseField>
+
+<ResponseField name="update" type="<K extends keyof T>(key: K, value: T[K]) => void">
+  Update a single field in the form data. Triggers the `onChange` callback.
+</ResponseField>
+
+<ResponseField name="errors" type="Record<string, string>">
+  Current validation errors, keyed by field name.
+</ResponseField>
+
+<ResponseField name="setErrors" type="Dispatch<Record<string, string>>">
+  Direct setter for the errors object.
+</ResponseField>
+
+<ResponseField name="handleBlur" type="() => void">
+  Callback to run validation when a field loses focus. Updates the `errors` state.
+</ResponseField>
+
+<ResponseField name="handleUpdate" type="<K extends keyof T>(field: K, value: T[K]) => void">
+  Update a field and immediately validate the entire form. Combines `update` with validation.
+</ResponseField>
+
+### Usage Example
+
+```tsx
+import { useFormData } from "../../../domain/hooks/use-form-data";
+import { validateUrlQr } from "../../../domain/validation/validators";
+import type { UrlQrData } from "../../../domain/types/qr";
+
+export default function UrlForm({ onChange }: { onChange?: (data: UrlQrData) => void }) {
+  const { data, errors, handleUpdate } = useFormData<UrlQrData>({
+    initialData: { url: "" },
+    onChange,
+    validate: validateUrlQr,
+  });
+
+  return (
+    <input
+      type="text"
+      value={data.url}
+      onInput={(e) => handleUpdate("url", (e.target as HTMLInputElement).value)}
+    />
+  );
+}
+```
+
+### Source Reference
+
+Implemented in `src/domain/hooks/use-form-data.ts:20-54`.
+
+## getInputValue
+
+Utility function to safely extract the value from HTML input events.
+
+### Type Signature
+
+```typescript
+function getInputValue(e: Event): string
+```
+
+### Parameters
+
+<ParamField path="e" type="Event" required>
+  DOM event from an input, select, or textarea element.
+</ParamField>
+
+### Return Value
+
+Returns the string value of the input element, or an empty string if the target is null or doesn't have a value property.
+
+### Usage Example
+
+```tsx
+import { getInputValue } from "../../../domain/hooks/use-form-data";
+
+<input
+  onInput={(e) => {
+    const value = getInputValue(e);
+    console.log(value); // safely extracted value
+  }}
+/>
+```
+
+### Source Reference
+
+Implemented in `src/domain/hooks/use-form-data.ts:56-64`.

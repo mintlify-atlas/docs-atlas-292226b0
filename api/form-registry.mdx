@@ -1,0 +1,93 @@
+---
+title: Form Registry
+description: Mapping of QR types to their corresponding form components
+icon: 'table-list'
+---
+
+## formRegistry
+
+A registry object that maps each `QrTypeKey` to its corresponding Preact form component. This registry is used by the `CardContentInput` component to dynamically render the appropriate form based on the selected QR type.
+
+### Type Signature
+
+```typescript
+const formRegistry: {
+  [QrTypeKey.PlainText]: typeof TextForm;
+  [QrTypeKey.Url]: typeof UrlForm;
+  [QrTypeKey.Wifi]: typeof WifiForm;
+  [QrTypeKey.VCard]: typeof VCardForm;
+  [QrTypeKey.Payment]: typeof PaymentForm;
+  [QrTypeKey.Event]: typeof EventForm;
+}
+```
+
+### Registry Mappings
+
+| QR Type Key | Component | File Path |
+|------------|-----------|-----------|
+| `QrTypeKey.PlainText` | `TextForm` | `src/components/forms/text/text-form.tsx` |
+| `QrTypeKey.Url` | `UrlForm` | `src/components/forms/url/url-form.tsx` |
+| `QrTypeKey.Wifi` | `WifiForm` | `src/components/forms/wifi/wifi-form.tsx` |
+| `QrTypeKey.VCard` | `VCardForm` | `src/components/forms/v-card-form/v-card-form.tsx` |
+| `QrTypeKey.Payment` | `PaymentForm` | `src/components/forms/payment-form/payment-form.tsx` |
+| `QrTypeKey.Event` | `EventForm` | `src/components/forms/event-form/event-form.tsx` |
+
+### Usage Example
+
+From `src/components/qr-code-app/cards/content-input-card/card-content-input.tsx:14`:
+
+```tsx
+import { formRegistry } from "../../../../domain/form/form-registry";
+import { QrTypeKey } from "../../../../domain/types/qr";
+
+export default function CardContentInput({ selectedType, onChange }) {
+  // Look up the form component for the selected type
+  const Form = selectedType ? formRegistry[selectedType] : null;
+
+  return (
+    <div>
+      {Form ? (
+        <Form onChange={onChange} />
+      ) : (
+        <p>Selecciona un tipo de QR</p>
+      )}
+    </div>
+  );
+}
+```
+
+### Form Component Interface
+
+All form components in the registry follow a consistent interface:
+
+```typescript
+interface FormProps<T> {
+  onChange?: (data: T) => void;
+}
+```
+
+Where `T` is the specific data type for that QR code format (e.g., `UrlQrData`, `WifiQrData`, etc.).
+
+### Adding New QR Types
+
+To add a new QR type to the registry:
+
+1. Create a new form component in `src/components/forms/`
+2. Import the component in `src/domain/form/form-registry.ts`
+3. Add a new entry to the `formRegistry` object mapping the `QrTypeKey` to your component
+4. Ensure your component implements the `FormProps<T>` interface
+
+Example:
+
+```typescript
+import NewQrForm from "../../components/forms/new-qr/new-qr-form";
+
+export const formRegistry = {
+  // ... existing entries
+  [QrTypeKey.NewType]: NewQrForm,
+};
+```
+
+### Source Reference
+
+Implemented in `src/domain/form/form-registry.ts:9-16`.

@@ -1,0 +1,151 @@
+---
+title: UI Utilities
+description: Toast notifications and other UI helper functions
+icon: 'bell'
+---
+
+## showToast
+
+Display a temporary notification toast message to the user. Toasts automatically appear at the top center of the screen and dismiss after a configurable duration.
+
+### Type Signature
+
+```typescript
+function showToast(config: ToastConfig): void
+```
+
+### Parameters
+
+<ParamField path="config" type="ToastConfig" required>
+  Configuration object for the toast notification.
+
+  <Expandable title="ToastConfig">
+    <ParamField path="message" type="string" required>
+      The text content to display in the toast.
+    </ParamField>
+
+    <ParamField path="type" type="'success' | 'error' | 'info' | 'warning'" required>
+      The type of toast, which determines the background color and icon:
+      - `success` - Green background with checkmark icon
+      - `error` - Red background with X icon
+      - `warning` - Orange background with alert icon
+      - `info` - Blue background with info icon
+    </ParamField>
+
+    <ParamField path="duration" type="number">
+      How long the toast should remain visible in milliseconds. Defaults to `3000` (3 seconds).
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Toast Styles
+
+The toast system uses the following color scheme:
+
+| Type | Background Color | Text Color |
+|------|-----------------|------------|
+| `success` | `#10b981` (green) | `#ffffff` (white) |
+| `error` | `#ef4444` (red) | `#ffffff` (white) |
+| `warning` | `#f59e0b` (orange) | `#ffffff` (white) |
+| `info` | `#3b82f6` (blue) | `#ffffff` (white) |
+
+### Usage Examples
+
+#### Success Toast
+
+```typescript
+import { showToast } from "../../../domain/ui/toast";
+
+showToast({
+  message: "QR code downloaded successfully!",
+  type: "success",
+  duration: 3000,
+});
+```
+
+#### Error Toast
+
+```typescript
+showToast({
+  message: "Error downloading QR code. Please try again.",
+  type: "error",
+});
+```
+
+#### Warning Toast
+
+```typescript
+showToast({
+  message: "Please complete all required fields before downloading",
+  type: "warning",
+});
+```
+
+#### Info Toast
+
+```typescript
+showToast({
+  message: "QR code opened for printing",
+  type: "info",
+  duration: 2000,
+});
+```
+
+### Real-World Usage
+
+From `src/components/qr-code-app/cards/qr-preview/card-qr-preview.tsx:102-105`:
+
+```tsx
+await qr.current.download({
+  name: fileName,
+  extension: format,
+});
+showToast({
+  message: `QR descargado como ${format.toUpperCase()}`,
+  type: "success",
+});
+```
+
+### Animation Behavior
+
+Toasts animate in with a slide-down effect and fade out with a slide-up effect. The animation keyframes are:
+
+**Slide Down (entrance):**
+```css
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+```
+
+**Slide Up (exit):**
+```css
+@keyframes slideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+```
+
+### Implementation Details
+
+- Toasts are positioned `fixed` at the top center of the viewport
+- Multiple toasts stack vertically with `0.5rem` spacing
+- The toast container has `z-index: 9999` to appear above all other content
+- Toasts are pointer-event transparent except for their own content
+- The toast system auto-initializes a container on first use
+
+### Source Reference
+
+Implemented in `src/domain/ui/toast.ts:65-132`.

@@ -68,7 +68,15 @@
             "pages": [
               "api/types",
               "api/encoders",
-              "api/validators"
+              "api/validators",
+              "api/form-registry"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "api/hooks",
+              "api/ui-utilities"
             ]
           }
         ]
